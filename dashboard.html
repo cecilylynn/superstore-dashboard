@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superstore Sales Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 1px solid #1e293b;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+  .header span {
+    color: #64748b;
+    font-size: 14px;
+  }
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 40px;
+  }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 20px 24px;
+    border: 1px solid #334155;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: #3b82f6; }
+  .kpi-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+  .kpi-value.profit { color: #22c55e; }
+  .kpi-value.margin { color: #3b82f6; }
+
+  /* Chart containers */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #334155;
+  }
+  .chart-card.full-width {
+    grid-column: 1 / -1;
+  }
+  .chart-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 16px;
+  }
+  .chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 300px;
+  }
+  .chart-wrapper.tall {
+    height: 400px;
+  }
+
+  /* Year filter */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .filter-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .filter-btn:hover { border-color: #3b82f6; color: #e2e8f0; }
+  .filter-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+  }
+
+  /* Detail popup overlay */
+  .detail-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 999;
+  }
+  .detail-overlay.visible { display: block; }
+  .detail-panel {
+    position: fixed;
+    z-index: 1000;
+    background: #1e293b;
+    border: 1px solid #3b82f6;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.2);
+    animation: popIn 0.2s ease-out;
+    display: none;
+    min-width: 280px;
+    max-width: 420px;
+  }
+  .detail-panel.visible { display: block; }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .detail-panel .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .detail-panel h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #f8fafc;
+  }
+  .detail-close {
+    background: none;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-close:hover { border-color: #ef4444; color: #ef4444; }
+  .detail-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .detail-stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+  .detail-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #f8fafc;
+  }
+  .detail-stat-value.positive { color: #22c55e; }
+  .detail-stat-value.negative { color: #ef4444; }
+
+  @media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .container { padding: 16px; }
+    .header { padding: 16px; }
+    .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Superstore Sales Dashboard</h1>
+  <span>2020 &ndash; 2023 | 10,194 transactions</span>
+</div>
+
+<div class="container">
+
+  <!-- Year filter -->
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setYear('all')">All Years</button>
+    <button class="filter-btn" onclick="setYear('2020')">2020</button>
+    <button class="filter-btn" onclick="setYear('2021')">2021</button>
+    <button class="filter-btn" onclick="setYear('2022')">2022</button>
+    <button class="filter-btn" onclick="setYear('2023')">2023</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value" id="kpi-sales">$2,326,534</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value profit" id="kpi-profit">$292,297</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Orders</div>
+      <div class="kpi-value" id="kpi-orders">5,111</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Quantity Sold</div>
+      <div class="kpi-value" id="kpi-qty">38,654</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Discount</div>
+      <div class="kpi-value" id="kpi-disc">15.5%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Profit Margin</div>
+      <div class="kpi-value margin" id="kpi-margin">12.6%</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card full-width">
+      <h3>Monthly Sales & Profit Trend</h3>
+      <div class="chart-wrapper tall"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Yearly Performance</h3>
+      <div class="chart-wrapper"><canvas id="yearlyChart"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Sales by Category</h3>
+      <div class="chart-wrapper"><canvas id="categoryChart"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Sales by Segment</h3>
+      <div class="chart-wrapper"><canvas id="segmentChart"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Sales by Region</h3>
+      <div class="chart-wrapper"><canvas id="regionChart"></canvas></div>
+    </div>
+
+    <div class="chart-card full-width">
+      <h3>Top 10 Sub-Categories by Sales</h3>
+      <div class="chart-wrapper"><canvas id="subcatChart"></canvas></div>
+    </div>
+
+    <div class="chart-card full-width">
+      <h3>Profit Margin by Sub-Category</h3>
+      <div class="chart-wrapper tall"><canvas id="marginChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating detail popup -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <h3 id="detailTitle">---</h3>
+    <button class="detail-close" onclick="closeDetail()">&times;</button>
+  </div>
+  <div class="detail-stats" id="detailStats"></div>
+</div>
+
+<script>
+const DATA = {
+  monthly: {
+    labels: ["2020-01","2020-02","2020-03","2020-04","2020-05","2020-06","2020-07","2020-08","2020-09","2020-10","2020-11","2020-12","2021-01","2021-02","2021-03","2021-04","2021-05","2021-06","2021-07","2021-08","2021-09","2021-10","2021-11","2021-12","2022-01","2022-02","2022-03","2022-04","2022-05","2022-06","2022-07","2022-08","2022-09","2022-10","2022-11","2022-12","2023-01","2023-02","2023-03","2023-04","2023-05","2023-06","2023-07","2023-08","2023-09","2023-10","2023-11","2023-12"],
+    sales: [14518.06,4519.89,56933.91,28295.35,26319.77,34669.48,33946.39,28918.34,82670.43,32413.34,78826.96,72008.31,18461.92,11951.41,39978.63,34195.21,30246.95,24797.29,28765.33,37057.0,64627.05,31407.13,75972.56,75532.56,18830.33,22978.82,53031.07,38829.16,57042.84,40937.15,40300.5,31716.81,73521.66,59831.0,79411.97,97502.28,44259.21,20301.13,60728.48,36779.04,45155.48,53056.08,45989.5,64129.76,88064.53,83474.78,118454.51,85175.03],
+    profit: [2539.39,862.31,693.45,3488.84,3196.39,4999.76,-841.48,5765.22,8593.63,3469.17,9362.96,9554.66,-3189.8,2813.85,9930.61,4187.5,4677.14,3335.56,3288.65,5371.63,8220.03,2817.97,12474.79,8093.06,2916.02,5004.58,3707.89,2991.66,8676.7,4926.32,4559.88,2317.5,9370.1,16256.84,4011.41,17926.3,7231.64,1613.87,15013.09,957.53,6299.81,8246.57,7006.5,9488.07,11050.8,10670.53,9692.1,8655.83]
+  },
+  category: {
+    labels: ["Furniture","Office Supplies","Technology"],
+    sales: [754747.76,731893.31,839893.28],
+    profit: [19730.0,126023.44,146543.38]
+  },
+  segment: {
+    labels: ["Consumer","Corporate","Home Office"],
+    sales: [1170659.79,715806.13,440068.43],
+    profit: [136371.45,94249.64,61675.73]
+  },
+  region: {
+    labels: ["Central","East","South","West"],
+    sales: [503170.67,691828.17,391721.91,739813.61],
+    profit: [39865.31,94883.26,46749.43,110798.82]
+  },
+  subcat: {
+    labels: ["Chairs","Phones","Storage","Tables","Binders","Machines","Accessories","Copiers","Bookcases","Appliances"],
+    sales: [335768.25,331842.64,224644.55,208020.18,207354.88,189925.03,167380.32,150745.29,115361.2,108213.18],
+    profit: [27223.53,45050.83,21285.11,-17753.21,31426.1,3461.98,41936.64,56093.94,-3632.07,18329.48]
+  },
+  yearly: {
+    labels: ["2020","2021","2022","2023"],
+    sales: [494040.21,472993.03,613933.58,745567.53],
+    profit: [51684.3,62020.97,82665.2,95926.35],
+    orders: [995,1053,1340,1723]
+  },
+  profitMargin: {
+    labels: ["Tables","Bookcases","Supplies","Machines","Chairs","Storage","Phones","Furnishings","Binders","Appliances","Art","Accessories","Fasteners","Copiers","Envelopes","Paper","Labels"],
+    margins: [-8.5,-3.1,-2.5,1.8,8.1,9.5,13.6,14.5,15.2,16.9,24.1,25.1,28.5,37.2,42.3,43.4,43.9],
+    sales: [208020.18,115361.2,46725.5,189925.03,335768.25,224644.55,331842.64,95598.13,207354.88,108213.18,27659.01,167380.32,8532.24,150745.29,16528.36,79540.54,12695.04]
+  }
+};
+
+const COLORS = {
+  blue: '#3b82f6',
+  green: '#22c55e',
+  red: '#ef4444',
+  amber: '#f59e0b',
+  purple: '#a855f7',
+  cyan: '#06b6d4',
+  pink: '#ec4899',
+  blueFill: 'rgba(59,130,246,0.15)',
+  greenFill: 'rgba(34,197,94,0.15)'
+};
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
+    tooltip: {
+      backgroundColor: '#1e293b',
+      titleColor: '#f8fafc',
+      bodyColor: '#e2e8f0',
+      borderColor: '#334155',
+      borderWidth: 1,
+      callbacks: {
+        label: ctx => {
+          const v = ctx.parsed.y ?? ctx.parsed;
+          if (typeof v === 'number' && Math.abs(v) > 100) return ctx.dataset.label + ': $' + v.toLocaleString();
+          return ctx.dataset.label + ': ' + v;
+        }
+      }
+    }
+  },
+  scales: {
+    x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#1e293b' } },
+    y: {
+      ticks: {
+        color: '#64748b',
+        font: { size: 11 },
+        callback: v => Math.abs(v) >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v
+      },
+      grid: { color: '#1e293b' }
+    }
+  }
+};
+
+function deepMerge(target, source) {
+  const out = {...target};
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      out[key] = deepMerge(out[key] || {}, source[key]);
+    } else {
+      out[key] = source[key];
+    }
+  }
+  return out;
+}
+
+// --- CHARTS ---
+const charts = {};
+
+// Trend Chart
+charts.trend = new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: DATA.monthly.labels,
+    datasets: [
+      {
+        label: 'Sales',
+        data: DATA.monthly.sales,
+        borderColor: COLORS.blue,
+        backgroundColor: COLORS.blueFill,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+        pointHoverRadius: 5
+      },
+      {
+        label: 'Profit',
+        data: DATA.monthly.profit,
+        borderColor: COLORS.green,
+        backgroundColor: COLORS.greenFill,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+        pointHoverRadius: 5
+      }
+    ]
+  },
+  options: deepMerge(chartDefaults, {
+    interaction: { mode: 'index', intersect: false },
+    scales: { x: { ticks: { maxTicksSkip: 6, maxRotation: 45, minRotation: 0 } } }
+  })
+});
+
+// Yearly Chart
+charts.yearly = new Chart(document.getElementById('yearlyChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.yearly.labels,
+    datasets: [
+      { label: 'Sales', data: DATA.yearly.sales, backgroundColor: COLORS.blue, borderRadius: 6 },
+      { label: 'Profit', data: DATA.yearly.profit, backgroundColor: COLORS.green, borderRadius: 6 }
+    ]
+  },
+  options: deepMerge(chartDefaults, {})
+});
+
+// Category Chart - Doughnut
+charts.category = new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: DATA.category.labels,
+    datasets: [{
+      data: DATA.category.sales,
+      backgroundColor: [COLORS.blue, COLORS.amber, COLORS.cyan],
+      borderColor: '#1e293b',
+      borderWidth: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 16, font: { size: 12 } } },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: { label: ctx => ctx.label + ': $' + ctx.parsed.toLocaleString() }
+      }
+    }
+  }
+});
+
+// Segment Chart - Doughnut
+charts.segment = new Chart(document.getElementById('segmentChart'), {
+  type: 'doughnut',
+  data: {
+    labels: DATA.segment.labels,
+    datasets: [{
+      data: DATA.segment.sales,
+      backgroundColor: [COLORS.purple, COLORS.pink, COLORS.green],
+      borderColor: '#1e293b',
+      borderWidth: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 16, font: { size: 12 } } },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: { label: ctx => ctx.label + ': $' + ctx.parsed.toLocaleString() }
+      }
+    }
+  }
+});
+
+// Region Chart
+charts.region = new Chart(document.getElementById('regionChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.region.labels,
+    datasets: [
+      { label: 'Sales', data: DATA.region.sales, backgroundColor: COLORS.blue, borderRadius: 6 },
+      { label: 'Profit', data: DATA.region.profit, backgroundColor: COLORS.green, borderRadius: 6 }
+    ]
+  },
+  options: deepMerge(chartDefaults, {})
+});
+
+// Sub-Category Chart
+charts.subcat = new Chart(document.getElementById('subcatChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.subcat.labels,
+    datasets: [
+      { label: 'Sales', data: DATA.subcat.sales, backgroundColor: COLORS.blue, borderRadius: 6 },
+      { label: 'Profit', data: DATA.subcat.profit, backgroundColor: ctx => ctx.parsed && ctx.parsed.x < 0 ? COLORS.red : COLORS.green, borderRadius: 6 }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: chartDefaults.plugins,
+    scales: {
+      x: {
+        ticks: { color: '#64748b', font: { size: 11 }, callback: v => Math.abs(v) >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v },
+        grid: { color: '#1e293b' }
+      },
+      y: {
+        ticks: { color: '#94a3b8', font: { size: 12 } },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+// Profit Margin Chart
+charts.margin = new Chart(document.getElementById('marginChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.profitMargin.labels,
+    datasets: [{
+      label: 'Profit Margin %',
+      data: DATA.profitMargin.margins,
+      backgroundColor: DATA.profitMargin.margins.map(v => v < 0 ? COLORS.red : v < 10 ? COLORS.amber : COLORS.green),
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: {
+      legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => 'Margin: ' + ctx.parsed.x + '% | Sales: $' + DATA.profitMargin.sales[ctx.dataIndex].toLocaleString()
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#64748b', font: { size: 11 }, callback: v => v + '%' },
+        grid: { color: '#1e293b' }
+      },
+      y: { ticks: { color: '#94a3b8', font: { size: 12 } }, grid: { display: false } }
+    }
+  }
+});
+
+// --- YEAR FILTER ---
+function setYear(year) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (year === 'all') {
+    updateTrend(DATA.monthly.labels, DATA.monthly.sales, DATA.monthly.profit);
+    document.getElementById('kpi-sales').textContent = '$' + Math.round(2326534).toLocaleString();
+    document.getElementById('kpi-profit').textContent = '$' + Math.round(292297).toLocaleString();
+    document.getElementById('kpi-orders').textContent = (5111).toLocaleString();
+    document.getElementById('kpi-qty').textContent = (38654).toLocaleString();
+    document.getElementById('kpi-disc').textContent = '15.5%';
+    document.getElementById('kpi-margin').textContent = '12.6%';
+  } else {
+    const prefix = year + '-';
+    const indices = DATA.monthly.labels.map((l, i) => l.startsWith(prefix) ? i : -1).filter(i => i >= 0);
+    const labels = indices.map(i => DATA.monthly.labels[i]);
+    const sales = indices.map(i => DATA.monthly.sales[i]);
+    const profit = indices.map(i => DATA.monthly.profit[i]);
+    updateTrend(labels, sales, profit);
+
+    const totalSales = sales.reduce((a, b) => a + b, 0);
+    const totalProfit = profit.reduce((a, b) => a + b, 0);
+    const yi = DATA.yearly.labels.indexOf(year);
+    document.getElementById('kpi-sales').textContent = '$' + Math.round(totalSales).toLocaleString();
+    document.getElementById('kpi-profit').textContent = '$' + Math.round(totalProfit).toLocaleString();
+    document.getElementById('kpi-orders').textContent = (yi >= 0 ? DATA.yearly.orders[yi] : 0).toLocaleString();
+    document.getElementById('kpi-qty').textContent = '---';
+    document.getElementById('kpi-disc').textContent = '---';
+    document.getElementById('kpi-margin').textContent = (totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0) + '%';
+  }
+}
+
+function updateTrend(labels, sales, profit) {
+  charts.trend.data.labels = labels;
+  charts.trend.data.datasets[0].data = sales;
+  charts.trend.data.datasets[1].data = profit;
+  charts.trend.update();
+}
+
+// --- DETAIL POPUP (click interactivity) ---
+let lastClickEvent = null;
+
+function showDetail(title, stats) {
+  const panel = document.getElementById('detailPanel');
+  const overlay = document.getElementById('detailOverlay');
+  document.getElementById('detailTitle').textContent = title;
+  const container = document.getElementById('detailStats');
+  container.innerHTML = stats.map(s => `
+    <div>
+      <div class="detail-stat-label">${s.label}</div>
+      <div class="detail-stat-value ${s.cls || ''}">${s.value}</div>
+    </div>
+  `).join('');
+
+  // Position near the click
+  overlay.classList.add('visible');
+  panel.classList.add('visible');
+
+  // Let the panel render so we can measure it
+  requestAnimationFrame(() => {
+    const pw = panel.offsetWidth;
+    const ph = panel.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let x = lastClickEvent ? lastClickEvent.clientX : vw / 2;
+    let y = lastClickEvent ? lastClickEvent.clientY : vh / 2;
+
+    // Offset slightly from cursor
+    x += 12;
+    y -= ph / 2;
+
+    // Keep within viewport
+    if (x + pw > vw - 16) x = x - pw - 24;
+    if (x < 16) x = 16;
+    if (y + ph > vh - 16) y = vh - ph - 16;
+    if (y < 16) y = 16;
+
+    panel.style.left = x + 'px';
+    panel.style.top = y + 'px';
+  });
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('visible');
+  document.getElementById('detailOverlay').classList.remove('visible');
+}
+
+function fmt(v) { return '$' + Math.round(v).toLocaleString(); }
+
+// Click handlers for each chart
+function addClickHandler(chart, handler) {
+  chart.options.onClick = (evt, elements) => {
+    if (elements.length > 0) {
+      lastClickEvent = evt.native || evt;
+      handler(elements[0].index, elements[0].datasetIndex);
+    }
+  };
+  chart.update();
+}
+
+addClickHandler(charts.trend, (i) => {
+  const month = DATA.monthly.labels[i];
+  const sales = DATA.monthly.sales[i];
+  const profit = DATA.monthly.profit[i];
+  const margin = ((profit / sales) * 100).toFixed(1);
+  showDetail(month, [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Profit', value: fmt(profit), cls: profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Profit Margin', value: margin + '%', cls: profit >= 0 ? 'positive' : 'negative' }
+  ]);
+});
+
+addClickHandler(charts.yearly, (i) => {
+  const year = DATA.yearly.labels[i];
+  const sales = DATA.yearly.sales[i];
+  const profit = DATA.yearly.profit[i];
+  const orders = DATA.yearly.orders[i];
+  const margin = ((profit / sales) * 100).toFixed(1);
+  const avgOrder = sales / orders;
+  showDetail('Year ' + year, [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Profit', value: fmt(profit), cls: 'positive' },
+    { label: 'Orders', value: orders.toLocaleString() },
+    { label: 'Avg Order Value', value: fmt(avgOrder) },
+    { label: 'Profit Margin', value: margin + '%', cls: 'positive' }
+  ]);
+});
+
+addClickHandler(charts.category, (i) => {
+  const cat = DATA.category.labels[i];
+  const sales = DATA.category.sales[i];
+  const profit = DATA.category.profit[i];
+  const margin = ((profit / sales) * 100).toFixed(1);
+  const pctOfTotal = ((sales / 2326534.35) * 100).toFixed(1);
+  showDetail(cat, [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Profit', value: fmt(profit), cls: profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Profit Margin', value: margin + '%', cls: profit >= 0 ? 'positive' : 'negative' },
+    { label: '% of Total Sales', value: pctOfTotal + '%' }
+  ]);
+});
+
+addClickHandler(charts.segment, (i) => {
+  const seg = DATA.segment.labels[i];
+  const sales = DATA.segment.sales[i];
+  const profit = DATA.segment.profit[i];
+  const margin = ((profit / sales) * 100).toFixed(1);
+  const pctOfTotal = ((sales / 2326534.35) * 100).toFixed(1);
+  showDetail(seg + ' Segment', [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Profit', value: fmt(profit), cls: 'positive' },
+    { label: 'Profit Margin', value: margin + '%', cls: 'positive' },
+    { label: '% of Total Sales', value: pctOfTotal + '%' }
+  ]);
+});
+
+addClickHandler(charts.region, (i) => {
+  const reg = DATA.region.labels[i];
+  const sales = DATA.region.sales[i];
+  const profit = DATA.region.profit[i];
+  const margin = ((profit / sales) * 100).toFixed(1);
+  showDetail(reg + ' Region', [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Profit', value: fmt(profit), cls: profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Profit Margin', value: margin + '%', cls: profit >= 0 ? 'positive' : 'negative' }
+  ]);
+});
+
+addClickHandler(charts.subcat, (i) => {
+  const name = DATA.subcat.labels[i];
+  const sales = DATA.subcat.sales[i];
+  const profit = DATA.subcat.profit[i];
+  const margin = ((profit / sales) * 100).toFixed(1);
+  showDetail(name, [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Profit', value: fmt(profit), cls: profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Profit Margin', value: margin + '%', cls: profit >= 0 ? 'positive' : 'negative' }
+  ]);
+});
+
+addClickHandler(charts.margin, (i) => {
+  const name = DATA.profitMargin.labels[i];
+  const sales = DATA.profitMargin.sales[i];
+  const margin = DATA.profitMargin.margins[i];
+  const profit = sales * margin / 100;
+  showDetail(name, [
+    { label: 'Sales', value: fmt(sales) },
+    { label: 'Est. Profit', value: fmt(profit), cls: profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Profit Margin', value: margin + '%', cls: margin >= 0 ? 'positive' : 'negative' }
+  ]);
+});
+</script>
+</body>
+</html>
