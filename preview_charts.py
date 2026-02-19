@@ -255,20 +255,40 @@ def get_subcategory_actuals(category):
     d = d[d['Month'] <= selected_month] if time_range == 'YTD' else d[d['Month'] == selected_month]
     return d.groupby('Sub-Category')['Sales'].sum().sort_values(ascending=True)
 
+def get_subcategory_period_comparison(category):
+    """Get comparison by sub-category for the SELECTED period (YTD or month)."""
+    subcats = orders[orders['Category'] == category]['Sub-Category'].unique()
+    result = {}
+
+    if comparison_mode == 'vs Goal':
+        ym_list = ([f"{selected_year}-{m:02d}" for m in range(1, selected_month + 1)]
+                   if time_range == 'YTD' else [f"{selected_year}-{selected_month:02d}"])
+        g = goals[goals['Year-Month'].isin(ym_list)]
+        g = g[g['Sub-Category'].isin(subcats)]
+        for sc in subcats:
+            result[sc] = g[g['Sub-Category'] == sc]['Sales_Goal'].sum()
+    else:
+        prior = orders[orders['Year'] == selected_year - 1].copy()
+        prior = prior[prior['Category'] == category]
+        prior = (prior[prior['Month'] <= selected_month] if time_range == 'YTD'
+                 else prior[prior['Month'] == selected_month])
+        for sc in subcats:
+            result[sc] = prior[prior['Sub-Category'] == sc]['Sales'].sum()
+
+    return result
+
 def get_subcategory_full_year_comparison(category):
     """Get full-year comparison (goal or prior year) by sub-category."""
     subcats = orders[orders['Category'] == category]['Sub-Category'].unique()
     result = {}
 
     if comparison_mode == 'vs Goal':
-        # Sum goals for all 12 months of selected year
         ym_list = [f"{selected_year}-{m:02d}" for m in range(1, 13)]
         g = goals[goals['Year-Month'].isin(ym_list)]
         g = g[g['Sub-Category'].isin(subcats)]
         for sc in subcats:
             result[sc] = g[g['Sub-Category'] == sc]['Sales_Goal'].sum()
     else:
-        # Sum actual sales for all 12 months of prior year
         prior = orders[orders['Year'] == selected_year - 1].copy()
         prior = prior[prior['Category'] == category]
         for sc in subcats:
@@ -284,39 +304,42 @@ def make_subcategory_chart(category, height=350, width=None):
     - Dark gray line: reference point at gray bar end
     """
     actuals = get_subcategory_actuals(category)
+    period_comps = get_subcategory_period_comparison(category)
     full_year_comps = get_subcategory_full_year_comparison(category)
     _, _, _, comp_label = get_period_totals(category)
 
-    # Get comparison values in same order as actuals
-    comp_vals = [full_year_comps.get(sc, 0) for sc in actuals.index]
-    subcat_names = actuals.index.tolist()
+    # Values in same order as actuals (sorted ascending)
+    period_vals   = [period_comps.get(sc, 0) for sc in actuals.index]
+    fy_vals       = [full_year_comps.get(sc, 0) for sc in actuals.index]
+    subcat_names  = actuals.index.tolist()
 
-    # Build hover text for each sub-category
+    # Build hover text
     hover = []
-    for sc, actual, comp in zip(subcat_names, actuals, comp_vals):
-        pct = ((actual - comp) / comp * 100) if comp > 0 else 0
+    for sc, actual, pcomp, fycomp in zip(subcat_names, actuals, period_vals, fy_vals):
+        pct = ((actual - pcomp) / pcomp * 100) if pcomp > 0 else 0
         arrow = '▲' if pct >= 0 else '▼'
         hover.append(
             f"<b>{sc}</b><br>"
             f"Actual ({period_label}): ${actual:,.0f}<br>"
-            f"{comp_label} (Full Year): ${comp:,.0f}<br>"
-            f"Difference: {arrow} {abs(pct):.1f}%"
+            f"{comp_label} ({period_label}): ${pcomp:,.0f}<br>"
+            f"Difference: {arrow} {abs(pct):.1f}%<br>"
+            f"{comp_label} (Full Year {selected_year}): ${fycomp:,.0f}"
         )
 
     f = go.Figure()
 
-    # Gray bars (full-year comparison) in background
+    # Gray bars = comparison for the SELECTED PERIOD (behind blue bars)
     f.add_trace(go.Bar(
-        y=subcat_names, x=comp_vals,
+        y=subcat_names, x=period_vals,
         orientation='h',
-        name=f'{comp_label} (FY)',
+        name=f'{comp_label}',
         marker_color='#D3D3D3',
         opacity=0.85,
         showlegend=False,
-        hovertemplate='<b>%{y}</b><br>' + comp_label + ' (FY): $%{x:,.0f}<extra></extra>'
+        hovertemplate='<b>%{y}</b><br>' + comp_label + ' (' + period_label + '): $%{x:,.0f}<extra></extra>'
     ))
 
-    # Blue bars (actual for selected period) in foreground
+    # Blue bars = actual for selected period (foreground)
     f.add_trace(go.Bar(
         y=subcat_names, x=actuals.tolist(),
         orientation='h',
@@ -328,6 +351,18 @@ def make_subcategory_chart(category, height=350, width=None):
         hovertemplate='%{hovertext}<extra></extra>'
     ))
 
+    # Dark gray vertical reference lines = FULL YEAR comparison
+    shapes = []
+    for i, fycomp in enumerate(fy_vals):
+        if fycomp > 0:
+            shapes.append(dict(
+                type='line',
+                x0=fycomp, x1=fycomp,
+                y0=i - 0.4, y1=i + 0.4,
+                line=dict(color='#555555', width=2),
+                layer='above',
+            ))
+
     layout_kwargs = dict(
         barmode='overlay',
         height=height,
@@ -335,6 +370,7 @@ def make_subcategory_chart(category, height=350, width=None):
         template='plotly_white',
         xaxis=dict(tickprefix='$', tickformat=',.0f'),
         yaxis=dict(tickfont=dict(size=11)),
+        shapes=shapes,
     )
     if width:
         layout_kwargs['width'] = width
@@ -518,8 +554,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             time_range = params['time_range'][0]
         if 'comparison' in params:
             comparison_mode = params['comparison'][0]
-        if 'category' in params:
-            selected_category = params['category'][0] if params['category'][0] else None
+        selected_category = params['category'][0] if 'category' in params and params['category'][0] else None
 
         selected_months = list(range(1, selected_month + 1)) if time_range == 'YTD' else [selected_month]
         bar_colors = ['#6495ED' if m in selected_months else '#B0C4DE' for m in range(1, 13)]
@@ -594,7 +629,7 @@ def build_html():
     if selected_category:
         body += f"""
     <div class="header-nav">
-      <a href="?" class="back-btn">← Back to Overview</a>
+      <a href="#" class="back-btn" onclick="goBack(); return false;">← Back to Overview</a>
       <span>Viewing: <b>{selected_category}</b></span>
     </div>
 """
@@ -654,6 +689,11 @@ def build_html():
 function selectCategory(category) {
   const params = new URLSearchParams(window.location.search);
   params.set('category', category);
+  window.location.search = params.toString();
+}
+function goBack() {
+  const params = new URLSearchParams(window.location.search);
+  params.delete('category');
   window.location.search = params.toString();
 }
 </script>
