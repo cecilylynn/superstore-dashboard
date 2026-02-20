@@ -1,0 +1,13 @@
+# render.yaml — Render deployment configuration
+# Docs: https://docs.render.com/blueprint-spec
+
+services:
+  - type: web
+    name: superstore-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn flask_app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.6"
