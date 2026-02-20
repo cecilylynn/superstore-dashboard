@@ -7,14 +7,18 @@ If you need to change how a number is computed, look here.
 No UI code lives here — just pure data logic.
 """
 
+import os
 import pandas as pd
 from typing import Optional
 
 
 # ── FILE PATHS ───────────────────────────────────────────────────────────────
-# These point to the raw data files. Change these if you move the data files.
-ORDERS_PATH = '/Users/cecilysantiago/Documents/Claude Code Playground/Datasources/Sample - Superstore.xls'
-GOALS_PATH  = '/Users/cecilysantiago/Documents/Claude Code Playground/Datasources/subcategory_monthly_goals.csv'
+# These point to the raw data files.  We use paths relative to THIS file's
+# directory so the dashboard works both locally and on Streamlit Cloud.
+# Change these if you move the data files somewhere else.
+_DIR = os.path.dirname(os.path.abspath(__file__))
+ORDERS_PATH = os.path.join(_DIR, 'data', 'Sample - Superstore.xls')
+GOALS_PATH  = os.path.join(_DIR, 'data', 'subcategory_monthly_goals.csv')
 
 
 # ── CONSTANTS ────────────────────────────────────────────────────────────────
