@@ -1,0 +1,339 @@
+/*
+ * dashboard.css — All styling for the Flask Sales Dashboard
+ *
+ * Design matches the Tableau reference dashboard:
+ *   - Light gray page background (#eef0f5)
+ *   - White cards with rounded corners and subtle shadows
+ *   - Clean typography with structured KPI cards
+ *   - Sidebar with filter controls on the left
+ *   - Responsive flexbox layout
+ *
+ * Color scheme (chart colors are set in JS, not here):
+ *   Blue #6495ED      — actual sales bars (selected months)
+ *   Pale Blue #B0C4DE — actual sales bars (unselected months)
+ *   Gray #D3D3D3      — comparison bars
+ *   Dark Gray #555555 — full-year reference lines
+ *   Green #2ecc71     — KPI percentage text (above goal)
+ *   Red #e74c3c       — KPI percentage text (below goal)
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  RESET & BASE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #eef0f5;
+    color: #333;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  PAGE LAYOUT — sidebar + main content side by side
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.page {
+    display: flex;
+    min-height: 100vh;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  SIDEBAR — filter controls on the left
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: #f5f6fa;
+    border-right: 1px solid #dde;
+    padding: 24px 20px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar h3 {
+    font-size: 14px;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: 700;
+}
+
+/* Dropdown labels */
+.sidebar label {
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 4px;
+}
+
+/* Dropdown selects */
+.sidebar select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    margin-bottom: 16px;
+    color: #333;
+    cursor: pointer;
+}
+
+.sidebar select:focus {
+    outline: none;
+    border-color: #6495ED;
+    box-shadow: 0 0 0 2px rgba(100, 149, 237, 0.2);
+}
+
+.sidebar hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 16px 0;
+}
+
+/* Radio button groups */
+.radio-group {
+    margin-bottom: 16px;
+}
+
+.radio-group-title {
+    font-weight: 600;
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.radio-group label {
+    font-weight: 400;
+    cursor: pointer;
+    font-size: 13px;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    padding: 2px 0;
+}
+
+.radio-group input[type="radio"] {
+    accent-color: #6495ED;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  MAIN CONTENT AREA
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.main {
+    flex: 1;
+    padding: 28px 32px;
+    min-width: 0;           /* Prevents flex child from overflowing */
+    overflow-y: auto;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  HEADER BAR — title + period info
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 18px 28px;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+    margin-bottom: 20px;
+}
+
+.dashboard-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.dashboard-subtitle {
+    font-size: 12px;
+    color: #999;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  ROW LAYOUT — flex rows with gaps between cards
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  CARD — white box that wraps KPIs, charts, etc.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+    overflow: hidden;
+}
+
+/* Cards that can be clicked (category panels in overview) */
+.clickable {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+
+.clickable:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.14);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  KPI CARDS — structured text: title, period, big number, comparison
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.kpi {
+    padding: 22px 26px;
+}
+
+.kpi-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.kpi-period {
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 10px;
+}
+
+.kpi-value {
+    font-size: 34px;
+    font-weight: 900;
+    color: #1a1a2e;
+    font-family: 'Arial Black', Arial, sans-serif;
+    line-height: 1.1;
+}
+
+.kpi-value.large {
+    font-size: 50px;
+}
+
+.kpi-separator {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 10px 0 8px 0;
+}
+
+.kpi-comp {
+    font-size: 13px;
+    color: #666;
+    margin-top: 8px;
+}
+
+/* Green text for above goal/comparison */
+.kpi-up {
+    color: #2ecc71;
+    font-weight: 700;
+}
+
+/* Red text for below goal/comparison */
+.kpi-down {
+    color: #e74c3c;
+    font-weight: 700;
+}
+
+/* Small exact-value text below the comparison line */
+.kpi-exact {
+    font-size: 10px;
+    color: #bbb;
+    margin-top: 8px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  CHART CONTAINERS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.chart-container {
+    width: 100%;
+}
+
+/* Color legend label above charts */
+.chart-label {
+    font-size: 11px;
+    color: #aaa;
+    padding: 12px 16px 0 16px;
+}
+
+/* Inner padding for chart cards so bars don't touch edges */
+.chart-card-inner {
+    padding: 4px 8px 8px 8px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  NAVIGATION — back button for drill-down mode
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.nav-bar {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.back-btn {
+    display: inline-block;
+    padding: 6px 14px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #555;
+    text-decoration: none;
+    transition: background 0.15s ease;
+}
+
+.back-btn:hover {
+    background: #f0f2f6;
+    border-color: #bbb;
+}
+
+.nav-label {
+    font-size: 13px;
+    color: #666;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  SECTION TITLE — used for "Category — Monthly Trend" in drill-down
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    margin: 8px 0 12px 0;
+}
+
+
