@@ -45,36 +45,173 @@ st.set_page_config(
 # ═════════════════════════════════════════════════════════════════════════════
 #  CUSTOM CSS
 # ═════════════════════════════════════════════════════════════════════════════
-# Streamlit lets us inject raw CSS with st.markdown(unsafe_allow_html=True).
-# We use this to:
-#   1. Add card-like styling (white background, rounded corners, shadow)
-#   2. Control spacing between elements
-#   3. Make the layout tighter than Streamlit's generous defaults
-#
-# The .card class wraps each chart/KPI in a white box with a subtle shadow.
-# The .stPlotlyChart CSS removes extra padding Streamlit adds around charts.
+# We inject custom CSS to match the Tableau dashboard design:
+#   - Light gray page background
+#   - White card containers with rounded corners and subtle shadows
+#   - Structured KPI cards with consistent typography
+#   - Tight spacing between elements
+#   - Full-width header bar
 st.markdown("""
 <style>
+    /* ── Page background ── */
+    /* Light gray background so white cards stand out visually */
+    .stApp {
+        background-color: #f0f2f6;
+    }
+
     /* Reduce Streamlit's default top padding on the main content area */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 0.5rem;
         padding-bottom: 0rem;
+        max-width: 100%;
     }
-    /* Card wrapper: white box with rounded corners and a subtle shadow */
-    .card {
+
+    /* ── Dashboard header bar ── */
+    /* White strip spanning full width at the top of the page */
+    .dashboard-header {
+        background: white;
+        padding: 14px 24px;
+        border-bottom: 2px solid #e0e0e0;
+        margin: -0.5rem -1rem 16px -1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 0 0 4px 4px;
+    }
+    .dashboard-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a1a2e;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .dashboard-subtitle {
+        font-size: 13px;
+        color: #888;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* ── KPI card ── */
+    /* White box with structured text: header, period, big number, comparison */
+    .kpi-card {
         background: white;
         border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-        padding: 0px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        padding: 16px 20px;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .kpi-card-large {
+        min-height: 140px;
+    }
+    .kpi-header {
+        font-size: 11px;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+    .kpi-period {
+        font-size: 11px;
+        color: #aaa;
+        margin-bottom: 8px;
+    }
+    .kpi-value {
+        font-size: 32px;
+        font-weight: 900;
+        color: #1a1a2e;
+        font-family: 'Arial Black', Arial, sans-serif;
+        line-height: 1.1;
+        margin-bottom: 4px;
+    }
+    .kpi-value-large {
+        font-size: 44px;
+    }
+    .kpi-comp {
+        font-size: 13px;
+        color: #666;
+        margin-top: 4px;
+    }
+    .kpi-up { color: #2ecc71; font-weight: 700; }
+    .kpi-down { color: #e74c3c; font-weight: 700; }
+    .kpi-exact {
+        font-size: 10px;
+        color: #bbb;
+        margin-top: 6px;
+    }
+
+    /* ── Chart card ── */
+    /* White box wrapping each Plotly chart */
+    .chart-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        padding: 12px 8px 4px 8px;
         overflow: hidden;
     }
-    /* Remove extra bottom margin Streamlit adds to each element */
+    .chart-label {
+        font-size: 11px;
+        color: #aaa;
+        padding: 0 8px 4px 8px;
+    }
+
+    /* ── Tighten Streamlit element spacing ── */
     .element-container {
         margin-bottom: 0px !important;
     }
-    /* Tighten up Plotly chart containers */
     .stPlotlyChart {
         margin-bottom: -10px;
+    }
+
+    /* ── Drill-down button styling ── */
+    /* Full-width button below each category panel */
+    .stButton > button {
+        width: 100%;
+        border: 1px solid #ddd;
+        background: white;
+        color: #555;
+        font-size: 12px;
+        border-radius: 6px;
+        padding: 6px 12px;
+        margin-top: 6px;
+    }
+    .stButton > button:hover {
+        background: #f8f9fb;
+        border-color: #bbb;
+    }
+
+    /* ── Back button in drill-down mode ── */
+    .back-bar {
+        margin-bottom: 12px;
+    }
+    .back-btn {
+        display: inline-block;
+        padding: 6px 14px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        color: #555;
+        text-decoration: none;
+    }
+    .back-btn:hover {
+        background: #f0f2f6;
+    }
+
+    /* ── Section title for drill-down monthly trend ── */
+    .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+        margin: 8px 0 8px 0;
+    }
+
+    /* ── Hide Streamlit's default header and footer chrome ── */
+    header[data-testid="stHeader"] {
+        background: transparent;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -116,7 +253,7 @@ with st.sidebar:
 
     # ── Year selector ────────────────────────────────────────────
     # The Superstore dataset spans 2020–2023.
-    # index=3 makes 2023 the default selection (0-indexed: 2020=0, 2021=1, 2022=2, 2023=3).
+    # index=3 makes 2023 the default selection (0-indexed).
     selected_year = st.selectbox(
         "Year",
         options=[2020, 2021, 2022, 2023],
@@ -125,13 +262,12 @@ with st.sidebar:
 
     # ── Month selector ───────────────────────────────────────────
     # Shows full month names (January, February, ...) but we need the
-    # month NUMBER (1–12) for our calculations.  So we use the index
-    # of the selected option + 1.
+    # month NUMBER (1–12) for our calculations.
     month_options = list(dp.MONTH_MAP.keys())   # ['January', 'February', ..., 'December']
     selected_month_name = st.selectbox(
         "Through Month",
         options=month_options,
-        index=11,   # Default to December (0-indexed, so 11 = December)
+        index=11,   # Default to December
     )
     # Convert the full month name to a number (e.g. "June" → 6)
     selected_month = dp.MONTH_MAP[selected_month_name]
@@ -139,10 +275,6 @@ with st.sidebar:
     st.divider()   # Visual horizontal line to separate groups
 
     # ── Time Range toggle ────────────────────────────────────────
-    # "Year-to-Date" = show cumulative data from January through the selected month.
-    # "Month Only" = show data for just the one selected month.
-    #
-    # st.radio returns the exact string the user selected.
     time_range = st.radio(
         "Time Range",
         options=["YTD", "Month Only"],
@@ -152,8 +284,6 @@ with st.sidebar:
     st.divider()
 
     # ── Comparison Mode toggle ───────────────────────────────────
-    # "vs Goal" = compare actual sales to the sales goal we generated.
-    # "vs Prior Year" = compare to the same period last year.
     comparison_mode = st.radio(
         "Compare To",
         options=["vs Goal", "vs Prior Year"],
@@ -164,13 +294,8 @@ with st.sidebar:
 # ═════════════════════════════════════════════════════════════════════════════
 #  SESSION STATE: DRILL-DOWN NAVIGATION
 # ═════════════════════════════════════════════════════════════════════════════
-# Streamlit's "session state" is like a dictionary that persists across
-# reruns within the same browser session.  We use it to remember which
-# category the user has drilled into (or None if they're on the overview).
-#
-# When the user clicks a "Drill Down" button, we set the category name
-# in session state and call st.rerun() to reload the page in drill-down mode.
-# When they click "Back to Overview", we clear it and rerun.
+# Streamlit's "session state" persists across reruns within the same browser
+# session.  We use it to remember which category the user has drilled into.
 
 if 'selected_category' not in st.session_state:
     st.session_state.selected_category = None   # Start in overview mode
@@ -180,25 +305,21 @@ if 'selected_category' not in st.session_state:
 #  DERIVED VALUES
 # ═════════════════════════════════════════════════════════════════════════════
 # These values are computed from the sidebar selections and used by multiple
-# parts of the page.  We compute them once here to avoid repeating the logic.
+# parts of the page.
 
 # Which months are "selected" (used for bar coloring)?
-# In YTD mode: months 1 through the selected month are "active" (blue).
-# In Month Only mode: just the one selected month is "active" (blue).
 if time_range == 'YTD':
-    selected_months = list(range(1, selected_month + 1))   # e.g. [1, 2, 3, 4, 5, 6] for June YTD
+    selected_months = list(range(1, selected_month + 1))
 else:
-    selected_months = [selected_month]                      # e.g. [6] for June only
+    selected_months = [selected_month]
 
-# Bar colors for the monthly chart: blue for active months, pale blue for others.
-# This creates a list of 12 color strings, one per month.
+# Bar colors: blue for active months, pale blue for others.
 bar_colors = [
     cb.BLUE if m in selected_months else cb.PALE_BLUE
     for m in range(1, 13)
 ]
 
 # Human-readable period label for tooltips and headers.
-# e.g. "Jan–June 2023" for YTD, or "June 2023" for Month Only.
 if time_range == 'YTD':
     period_label = f"Jan–{selected_month_name} {selected_year}"
 else:
@@ -206,26 +327,86 @@ else:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-#  PAGE HEADER
+#  HELPER: KPI CARD RENDERER
 # ═════════════════════════════════════════════════════════════════════════════
-st.markdown(f"**Sales Dashboard** &nbsp;&nbsp; "
-            f"<span style='font-size:13px; color:#888'>Period: {period_label} &nbsp;|&nbsp; "
-            f"Comparison: {comparison_mode}</span>",
-            unsafe_allow_html=True)
+# We render KPI cards as raw HTML instead of Plotly figures for precise
+# control over typography, spacing, and alignment.  This matches the
+# Tableau dashboard's clean card design.
+
+def render_kpi_html(
+    title: str,
+    actual: float,
+    comp: float,
+    pct: float,
+    comp_label: str,
+    period_text: str,
+    large: bool = False
+) -> str:
+    """
+    Build a KPI card as an HTML string.
+
+    Args:
+        title:       Card heading — "TOTAL SALES" or a category name.
+        actual:      Actual sales dollar amount.
+        comp:        Comparison value (goal or prior year).
+        pct:         Percent difference (positive = above, negative = below).
+        comp_label:  Label for comparison ("Goal" or "2022").
+        period_text: Text like "Jan–Dec 2023" shown under the title.
+        large:       True = big primary KPI card (Row 1).
+
+    Returns:
+        An HTML string. Render with st.markdown(html, unsafe_allow_html=True).
+    """
+    # Pick arrow direction and color class
+    arrow = '▲' if pct >= 0 else '▼'
+    color_cls = 'kpi-up' if pct >= 0 else 'kpi-down'
+
+    # CSS classes for sizing
+    card_cls = 'kpi-card kpi-card-large' if large else 'kpi-card'
+    val_cls  = 'kpi-value kpi-value-large' if large else 'kpi-value'
+
+    return f"""
+    <div class="{card_cls}">
+        <div class="kpi-header">{title}</div>
+        <div class="kpi-period">{period_text}</div>
+        <div class="{val_cls}">{dp.fmt(actual)}</div>
+        <div class="kpi-comp">
+            {comp_label}: {dp.fmt(comp)}
+            &nbsp;<span class="{color_cls}">({arrow} {abs(pct):.1f}%)</span>
+        </div>
+        <div class="kpi-exact">
+            Actual: ${actual:,.2f} &nbsp;|&nbsp; {comp_label}: ${comp:,.2f}
+        </div>
+    </div>
+    """
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  DASHBOARD HEADER BAR
+# ═════════════════════════════════════════════════════════════════════════════
+# Full-width white strip at the top with title on the left and period info
+# on the right, matching the Tableau dashboard header.
+
+st.markdown(f"""
+<div class="dashboard-header">
+    <div class="dashboard-title">Sales Dashboard</div>
+    <div class="dashboard-subtitle">
+        FY {selected_year} &nbsp;&nbsp;|&nbsp;&nbsp; {period_label} &nbsp;&nbsp;|&nbsp;&nbsp; {comparison_mode}
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  DRILL-DOWN NAVIGATION BAR
 # ═════════════════════════════════════════════════════════════════════════════
-# If we're in drill-down mode (a category is selected), show a "Back" button
-# and tell the user which category they're viewing.
+# If we're in drill-down mode, show a "Back" button and category label.
 if st.session_state.selected_category:
     col_back, col_label = st.columns([1, 5])
     with col_back:
-        # When clicked, this button clears the category and reruns the page
         if st.button("← Back to Overview"):
             st.session_state.selected_category = None
-            st.rerun()   # Immediately reload the page in overview mode
+            st.rerun()
     with col_label:
         st.markdown(f"Viewing: **{st.session_state.selected_category}**")
 
@@ -233,30 +414,31 @@ if st.session_state.selected_category:
 # ═════════════════════════════════════════════════════════════════════════════
 #  LAYOUT: OVERVIEW MODE
 # ═════════════════════════════════════════════════════════════════════════════
-# Overview shows all three categories side by side.
-#
-# Row 1: [KPI card (narrow)] [Overall monthly bar chart (wide)]
-# Row 2: [Furniture] [Office Supplies] [Technology]
-#         Each has a small KPI card + monthly bar chart
+# Overview shows:
+#   Row 1: [KPI card (narrow)] [Overall monthly bar chart (wide)]
+#   Row 2: [Furniture] [Office Supplies] [Technology]
+#           Each has a KPI card + bar chart + drill-down button
 
 if st.session_state.selected_category is None:
+
     # ── ROW 1: Overall KPI + Overall monthly chart ───────────────
-    # st.columns([1, 3]) creates two columns where the right one is 3x wider.
     kpi_col, chart_col = st.columns([1, 3])
 
     with kpi_col:
-        # Calculate the overall totals (no category filter)
+        # Calculate overall totals (no category filter)
         actual, comp, pct, comp_label = dp.get_period_totals(
             orders, goals, selected_year, selected_month,
             time_range, comparison_mode, category=None
         )
-        # Build and display the big KPI card
-        fig = cb.make_kpi_text_fig(actual, comp, pct, comp_label,
-                                   title="TOTAL SALES", large=True)
-        st.plotly_chart(fig, use_container_width=True, key="kpi_overall")
+        # Render KPI card as HTML
+        st.markdown(
+            render_kpi_html("Total Sales", actual, comp, pct,
+                            comp_label, period_label, large=True),
+            unsafe_allow_html=True
+        )
 
     with chart_col:
-        # Calculate monthly actuals and comparisons (no category filter)
+        # Calculate monthly actuals and comparisons
         actuals = dp.get_monthly_actuals(orders, selected_year, category=None)
         comps   = dp.get_monthly_comparison(
             orders, goals, selected_year, comparison_mode, category=None
@@ -265,15 +447,21 @@ if st.session_state.selected_category is None:
             orders, goals, selected_year, selected_month,
             time_range, comparison_mode, category=None
         )
-        # Build and display the overall monthly bar chart
+        # Build bar chart
         fig = cb.make_bar_chart(
             actuals.tolist(), comps, comp_label,
             bar_colors, dp.MONTH_NAMES, selected_year, height=280
         )
+        # Wrap in a white card container
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="chart-label">Blue = Actual &nbsp;|&nbsp; Gray = {comp_label}</div>',
+            unsafe_allow_html=True
+        )
         st.plotly_chart(fig, use_container_width=True, key="chart_overall")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ── ROW 2: Three category panels ─────────────────────────────
-    # st.columns(3) creates three equal-width columns.
     cat_cols = st.columns(3)
 
     for i, cat in enumerate(dp.CATEGORIES):
@@ -283,9 +471,14 @@ if st.session_state.selected_category is None:
                 orders, goals, selected_year, selected_month,
                 time_range, comparison_mode, category=cat
             )
-            fig = cb.make_kpi_text_fig(actual, comp, pct, comp_label,
-                                       title=cat, large=False)
-            st.plotly_chart(fig, use_container_width=True, key=f"kpi_{cat}")
+            st.markdown(
+                render_kpi_html(cat, actual, comp, pct,
+                                comp_label, period_label, large=False),
+                unsafe_allow_html=True
+            )
+
+            # Small spacer between KPI card and chart
+            st.markdown('<div style="height: 8px;"></div>', unsafe_allow_html=True)
 
             # Monthly bar chart for this category
             actuals = dp.get_monthly_actuals(orders, selected_year, category=cat)
@@ -294,12 +487,14 @@ if st.session_state.selected_category is None:
             )
             fig = cb.make_bar_chart(
                 actuals.tolist(), comps, comp_label,
-                bar_colors, dp.MONTH_NAMES, selected_year, height=240
+                bar_colors, dp.MONTH_NAMES, selected_year, height=220
             )
+            # Wrap in a white card container
+            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True, key=f"chart_{cat}")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-            # Drill-down button below each category's charts
-            # When clicked, we store the category name and rerun.
+            # Drill-down button
             if st.button(f"🔍 Drill into {cat}", key=f"drill_{cat}"):
                 st.session_state.selected_category = cat
                 st.rerun()
@@ -308,15 +503,9 @@ if st.session_state.selected_category is None:
 # ═════════════════════════════════════════════════════════════════════════════
 #  LAYOUT: DRILL-DOWN MODE
 # ═════════════════════════════════════════════════════════════════════════════
-# Drill-down shows one category in detail with a sub-category breakdown.
-#
-# Row 1: [KPI card (narrow)] [Sub-category horizontal bar chart (wide)]
-# Row 2: [Full-width monthly bar chart for the selected category]
-#
-# The sub-category chart shows:
-#   - Blue bars: actual sales for the selected period
-#   - Gray bars: comparison for the selected period (e.g. Jan–June goal)
-#   - Dark gray lines: full-year comparison (e.g. full 2023 goal)
+# Drill-down shows one category in detail:
+#   Row 1: [KPI card (narrow)] [Sub-category horizontal bar chart (wide)]
+#   Row 2: [Full-width monthly bar chart for the selected category]
 
 else:
     cat = st.session_state.selected_category
@@ -325,22 +514,18 @@ else:
     kpi_col, subcat_col = st.columns([1, 3])
 
     with kpi_col:
-        # KPI card — but this time filtered to the selected category.
-        # We use large=True so it matches the overall KPI card size.
         actual, comp, pct, comp_label = dp.get_period_totals(
             orders, goals, selected_year, selected_month,
             time_range, comparison_mode, category=cat
         )
-        fig = cb.make_kpi_text_fig(actual, comp, pct, comp_label,
-                                   title=cat, large=True)
-        st.plotly_chart(fig, use_container_width=True, key="kpi_drilldown")
+        st.markdown(
+            render_kpi_html(cat, actual, comp, pct,
+                            comp_label, period_label, large=True),
+            unsafe_allow_html=True
+        )
 
     with subcat_col:
-        # Sub-category horizontal bar chart.
-        # We need three datasets:
-        #   1. Actual sales by sub-category for the selected period
-        #   2. Comparison values for the selected period (gray bars)
-        #   3. Comparison values for the full year (dark reference lines)
+        # Sub-category horizontal bar chart
         sc_actuals = dp.get_subcategory_actuals(
             orders, selected_year, selected_month, time_range, cat
         )
@@ -355,10 +540,21 @@ else:
             sc_actuals, sc_period_comps, sc_fy_comps,
             comp_label, period_label, selected_year, height=350
         )
+        # Wrap in a white card container
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="chart-label">'
+            f'Blue = Actual &nbsp;|&nbsp; Gray = {comp_label} (period) '
+            f'&nbsp;|&nbsp; Dark line = {comp_label} (full year)'
+            f'</div>',
+            unsafe_allow_html=True
+        )
         st.plotly_chart(fig, use_container_width=True, key="chart_subcategory")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ── ROW 2: Full-width monthly bar chart for this category ────
-    st.markdown(f"#### {cat} — Monthly Trend")
+    st.markdown(f'<div class="section-title">{cat} — Monthly Trend</div>',
+                unsafe_allow_html=True)
 
     actuals = dp.get_monthly_actuals(orders, selected_year, category=cat)
     comps   = dp.get_monthly_comparison(
@@ -368,4 +564,10 @@ else:
         actuals.tolist(), comps, comp_label,
         bar_colors, dp.MONTH_NAMES, selected_year, height=280
     )
+    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="chart-label">Blue = Actual &nbsp;|&nbsp; Gray = {comp_label}</div>',
+        unsafe_allow_html=True
+    )
     st.plotly_chart(fig, use_container_width=True, key="chart_drilldown_monthly")
+    st.markdown('</div>', unsafe_allow_html=True)
