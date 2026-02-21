@@ -18,10 +18,6 @@ data_processing.py instead.
 
 import plotly.graph_objects as go
 
-# We import the fmt() formatter so we can show abbreviated dollar labels
-# like "$260K" on the KPI cards.
-from data_processing import fmt
-
 
 # ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
 # Defining colors in one place makes it easy to tweak the whole dashboard's
@@ -33,7 +29,6 @@ LIGHT_GRAY  = '#D3D3D3'   # Comparison bars (goal or prior year)
 DARK_GRAY   = '#555555'   # Full-year reference lines on sub-category chart
 GREEN       = '#2ecc71'   # KPI percentage text when ABOVE goal/comparison
 RED         = '#e74c3c'   # KPI percentage text when BELOW goal/comparison
-KPI_BG      = '#f8f9fb'   # Very light background for KPI cards
 GRID_COLOR  = '#f0f0f0'   # Subtle gridlines on charts
 
 
@@ -46,144 +41,6 @@ HOVERLABEL_STYLE = dict(
     font_family='Arial',     # Clean sans-serif font
     bordercolor='#ddd',      # Subtle border around the tooltip
 )
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-#  KPI TEXT FIGURE
-# ═════════════════════════════════════════════════════════════════════════════
-#
-#  This creates the "card" that shows a summary like:
-#
-#     TOTAL SALES
-#     $831K
-#     Goal: $852K  ▼ 2.4%
-#
-#  It's not really a "chart" — it's just text annotations on a blank Plotly
-#  figure.  We do it this way (instead of raw HTML) so the tooltip system
-#  works: hovering over the card shows exact dollar amounts.
-#
-#  Two sizes:
-#    large=True   →  Big card in Row 1 (overall totals)
-#    large=False  →  Smaller card for each category in Row 2
-
-def make_kpi_text_fig(
-    actual: float,
-    comp: float,
-    pct: float,
-    comp_label: str,
-    title: str,
-    large: bool = False
-) -> go.Figure:
-    """
-    Build a KPI summary card as a Plotly Figure.
-
-    Args:
-        actual:     The actual sales dollar amount (e.g. 831000).
-        comp:       The comparison value — goal or prior year (e.g. 852000).
-        pct:        Percent difference: ((actual - comp) / comp) × 100.
-                    Positive means above comparison; negative means below.
-        comp_label: Text label for the comparison, like "Goal" or "2022".
-        title:      Card heading — "TOTAL SALES" for the big card,
-                    or a category name like "Furniture" for small cards.
-        large:      True = big primary KPI card (Row 1).
-                    False = smaller category KPI card (Row 2).
-
-    Returns:
-        A Plotly Figure with text annotations. Render it with st.plotly_chart().
-    """
-    # Pick the up or down arrow and color based on whether we're above or below
-    arrow = '▲' if pct >= 0 else '▼'
-    color = GREEN if pct >= 0 else RED
-
-    # ── Size settings ────────────────────────────────────────────
-    # The big card gets larger fonts and more height; the small cards are compact.
-    if large:
-        val_size  = 56      # Font size for the big dollar number
-        sub_size  = 15      # Font size for the comparison line
-        height    = 140     # Total card height in pixels
-    else:
-        val_size  = 28
-        sub_size  = 12
-        height    = 90
-
-    # ── Start building the figure ────────────────────────────────
-    fig = go.Figure()
-
-    # Invisible dot — its only purpose is to carry a hover tooltip.
-    # When you hover anywhere on the card, this tooltip shows the EXACT
-    # dollar amounts (not the abbreviated "$260K" versions).
-    fig.add_trace(go.Scatter(
-        x=[0], y=[0.5],
-        mode='markers',
-        marker=dict(size=1, opacity=0),   # Invisible: 1px, fully transparent
-        hovertemplate=(
-            f"<b>{title}</b><br>"
-            f"Actual: ${actual:,.2f}<br>"           # e.g. "$831,249.73"
-            f"{comp_label}: ${comp:,.2f}<br>"       # e.g. "Goal: $852,100.00"
-            f"Diff: {arrow} {abs(pct):.1f}%"        # e.g. "Diff: ▼ 2.4%"
-            f"<extra></extra>"                      # Hides the trace name from tooltip
-        ),
-        showlegend=False,  # Don't show this invisible dot in any legend
-    ))
-
-    # ── Text annotation: title line ──────────────────────────────
-    # Positioned at the top-left of the card.
-    # x=0, y=1 with xanchor='left', yanchor='top' puts it in the top-left corner.
-    fig.add_annotation(
-        text=f"<b>{title}</b>",
-        x=0, y=1,
-        xref='paper', yref='paper',       # "paper" coordinates: (0,0)=bottom-left, (1,1)=top-right
-        xanchor='left', yanchor='top',
-        showarrow=False,                   # No arrow pointing to anything
-        font=dict(
-            size=13 if large else 12,
-            color='#555',                  # Medium gray for the title text
-        ),
-    )
-
-    # ── Text annotation: big sales number ────────────────────────
-    # This is the eye-catching number like "$831K" in the middle of the card.
-    fig.add_annotation(
-        text=f"<b>{fmt(actual)}</b>",      # fmt() turns 831000 into "$831K"
-        x=0, y=0.52,
-        xref='paper', yref='paper',
-        xanchor='left', yanchor='middle',
-        showarrow=False,
-        font=dict(
-            size=val_size,
-            color='#1a1a2e',               # Very dark navy — high contrast
-            family='Arial Black',          # Bold, heavy font for emphasis
-        ),
-    )
-
-    # ── Text annotation: comparison line ─────────────────────────
-    # Shows something like: "Goal: $852K  ▲ 2.4%"
-    # The arrow and percentage are colored green (above) or red (below).
-    fig.add_annotation(
-        text=(
-            f"{comp_label}: {fmt(comp)}   "
-            f"<span style='color:{color}'><b>{arrow} {abs(pct):.1f}%</b></span>"
-        ),
-        x=0, y=0.05,
-        xref='paper', yref='paper',
-        xanchor='left', yanchor='bottom',
-        showarrow=False,
-        font=dict(size=sub_size, color='#666'),
-    )
-
-    # ── Layout: make the figure look like a card, not a chart ────
-    fig.update_layout(
-        height=height,
-        margin=dict(t=6, b=6, l=12, r=6),     # Tight margins (pixels)
-        template='plotly_white',                # Clean white template
-        xaxis=dict(visible=False, range=[-0.1, 1]),  # Hide axes completely
-        yaxis=dict(visible=False, range=[0, 1]),
-        plot_bgcolor='white',
-        paper_bgcolor=KPI_BG,                   # Slightly off-white background
-        hoverlabel=HOVERLABEL_STYLE,            # Consistent tooltip look
-    )
-
-    return fig
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -279,11 +136,14 @@ def make_bar_chart(
     ))
 
     # ── Layout styling ───────────────────────────────────────────
+    # Backgrounds are transparent so the white card container shows through.
     fig.update_layout(
         barmode='overlay',            # Bars on top of each other (not side by side)
         height=height,
         margin=dict(t=8, b=36, l=48, r=8),   # Tight margins
         template='plotly_white',
+        paper_bgcolor='rgba(0,0,0,0)',  # Transparent — white card shows through
+        plot_bgcolor='rgba(0,0,0,0)',   # Transparent — white card shows through
         yaxis=dict(
             tickprefix='$',           # Show dollar sign on y-axis labels
             tickformat=',.0f',        # Comma-separated, no decimals (e.g. "$45,000")
@@ -427,11 +287,14 @@ def make_subcategory_chart(
             ))
 
     # ── Layout styling ───────────────────────────────────────────
+    # Backgrounds are transparent so the white card container shows through.
     fig.update_layout(
         barmode='overlay',             # Bars on top of each other
         height=height,
         margin=dict(t=8, b=20, l=120, r=8),   # Extra left margin for sub-category names
         template='plotly_white',
+        paper_bgcolor='rgba(0,0,0,0)',  # Transparent — white card shows through
+        plot_bgcolor='rgba(0,0,0,0)',   # Transparent — white card shows through
         xaxis=dict(
             tickprefix='$',
             tickformat=',.0f',
