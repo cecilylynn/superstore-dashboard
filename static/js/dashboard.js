@@ -120,17 +120,12 @@ function renderKPI(el, title, total, plabel, large) {
     const arrow = pct >= 0 ? '\u25B2' : '\u25BC';
     const cls   = pct >= 0 ? 'kpi-up' : 'kpi-down';
 
+    // Three lines: combined header | big dollar value | comparison
     el.innerHTML =
-        '<div class="kpi-title">' + title + '</div>' +
-        '<div class="kpi-period">' + plabel + '</div>' +
+        '<div class="kpi-header">' + title + ' \u2013 ' + plabel + ' Revenue</div>' +
         '<div class="kpi-value' + (large ? ' large' : '') + '">' + fmt(actual) + '</div>' +
-        '<hr class="kpi-separator">' +
         '<div class="kpi-comp">' + label + ': ' + fmt(comp) +
         '  <span class="' + cls + '">' + arrow + ' ' + Math.abs(pct).toFixed(1) + '%</span>' +
-        '</div>' +
-        '<div class="kpi-exact">' +
-        'Actual: $' + actual.toLocaleString('en-US', {minimumFractionDigits: 2}) +
-        '  |  ' + label + ': $' + comp.toLocaleString('en-US', {minimumFractionDigits: 2}) +
         '</div>';
 }
 
@@ -152,7 +147,7 @@ function renderKPI(el, title, total, plabel, large) {
  *   comps     — array of 12 comparison values
  *   compLabel — "Goal" or "2022"
  *   colors    — array of 12 color strings (blue or pale blue)
- *   height    — chart height in pixels
+ *   height    — chart height in pixels (null = fill container)
  */
 function plotBarChart(divId, actuals, comps, compLabel, colors, height) {
     const p = getParams();
@@ -187,9 +182,17 @@ function plotBarChart(divId, actuals, comps, compLabel, colors, height) {
         },
     ];
 
+    // Compute chart dimensions from container element.
+    // Reading clientWidth/clientHeight forces a synchronous layout reflow,
+    // ensuring the flex-computed sizes are available.
+    var el = document.getElementById(divId);
+    var chartWidth  = el.clientWidth  || el.parentElement.clientWidth  || 600;
+    var chartHeight = height || el.clientHeight || el.parentElement.clientHeight || 300;
+
     const layout = {
         barmode: 'overlay',
-        height: height,
+        width: chartWidth,
+        height: chartHeight,
         margin: {t: 12, b: 40, l: 56, r: 16},
         template: 'plotly_white',
         paper_bgcolor: 'rgba(0,0,0,0)',
@@ -275,9 +278,15 @@ function plotSubcatChart(divId, sc, compLabel, plabel, year) {
         line: {color: DARK_GRAY, width: 2}, layer: 'above',
     } : null).filter(Boolean);
 
+    // Compute chart dimensions from container element
+    var el = document.getElementById(divId);
+    var chartWidth  = el.clientWidth  || el.parentElement.clientWidth  || 600;
+    var chartHeight = el.clientHeight || el.parentElement.clientHeight || 400;
+
     const layout = {
         barmode: 'overlay',
-        height: Math.max(220, names.length * 55 + 50),
+        width: chartWidth,
+        height: chartHeight,
         margin: {t: 12, b: 24, l: 130, r: 16},
         template: 'plotly_white',
         paper_bgcolor: 'rgba(0,0,0,0)',
@@ -337,9 +346,8 @@ function update(forceRefetch) {
     const plabel = periodLabel(p);
     const colors = barColors(p);
 
-    // Update the header subtitle
-    document.getElementById('period-label').textContent =
-        'FY ' + p.year + '  |  ' + plabel + '  |  ' + p.cm;
+    // Update the year display in the title bar
+    document.getElementById('title-year').textContent = 'FY ' + p.year;
 
     // Decide whether we need fresh data or can use the cache
     if (forceRefetch !== false || currentData === null) {
@@ -354,6 +362,9 @@ function update(forceRefetch) {
 
 /**
  * Render the dashboard using currentData.  Called after data is loaded.
+ *
+ * Uses requestAnimationFrame to defer Plotly rendering until the browser
+ * has computed flex layout — ensures chart containers have real dimensions.
  */
 function render(p, plabel, colors) {
     const d = currentData;
@@ -363,7 +374,10 @@ function render(p, plabel, colors) {
 
     if (selectedCategory === null) {
         // ── OVERVIEW MODE ─────────────────────────────────────────
-        document.getElementById('nav-bar').style.display = 'none';
+
+        // Hide the sidebar back button
+        document.getElementById('sidebar-back').style.display = 'none';
+        document.getElementById('sidebar-back-hr').style.display = 'none';
 
         // Row 1: Overall KPI + overall bar chart
         renderKPI(document.getElementById('kpi-main'), 'TOTAL SALES',
@@ -373,25 +387,20 @@ function render(p, plabel, colors) {
         document.getElementById('chart-main-label').textContent =
             'Blue = Actual  |  Gray = ' + compLabel;
 
-        // Reset chart-main height for bar chart
-        document.getElementById('chart-main').style.height = '320px';
-        plotBarChart('chart-main', d.overall_actuals, d.overall_comps,
-                     compLabel, colors, 320);
-
         // Row 2: Three category panels (clicking any card drills down)
-        var row2Html = '<div class="row">';
+        var row2Html = '<div class="row" style="height: 100%;">';
         CATEGORIES.forEach(function(cat, i) {
             row2Html +=
-                '<div style="flex: 1; min-width: 0;">' +
+                '<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">' +
                     // KPI card (clickable)
                     '<div class="card kpi clickable" id="kpi-cat-' + i + '" ' +
                          'onclick="selectCategory(\'' + cat + '\')" ' +
-                         'style="margin-bottom: 10px;"></div>' +
-                    // Chart card (clickable)
-                    '<div class="card clickable" onclick="selectCategory(\'' + cat + '\')">' +
+                         'style="flex-shrink: 0;"></div>' +
+                    // Chart card (clickable, fills remaining space)
+                    '<div class="card clickable" onclick="selectCategory(\'' + cat + '\')" ' +
+                         'style="flex: 1; min-height: 0;">' +
                         '<div class="chart-card-inner">' +
-                            '<div id="chart-cat-' + i + '" class="chart-container" ' +
-                                 'style="height: 250px;"></div>' +
+                            '<div id="chart-cat-' + i + '" class="chart-container"></div>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -399,50 +408,77 @@ function render(p, plabel, colors) {
         row2Html += '</div>';
         document.getElementById('row2').innerHTML = row2Html;
 
-        // Render each category's KPI card and chart
-        CATEGORIES.forEach(function(cat, i) {
-            var c = d.cats[cat];
-            renderKPI(document.getElementById('kpi-cat-' + i), cat,
-                      c.total, plabel, false);
-            plotBarChart('chart-cat-' + i, c.actuals, c.comps,
-                         compLabel, colors, 250);
+        // Defer Plotly calls so the browser computes flex layout first.
+        // Double-rAF ensures style + layout are fully resolved before we
+        // read container dimensions inside the chart functions.
+        requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            // Overall bar chart in Row 1
+            plotBarChart('chart-main', d.overall_actuals, d.overall_comps,
+                         compLabel, colors, null);
+
+            // Each category's KPI card and chart in Row 2
+            CATEGORIES.forEach(function(cat, i) {
+                var c = d.cats[cat];
+                renderKPI(document.getElementById('kpi-cat-' + i), cat,
+                          c.total, plabel, false);
+                plotBarChart('chart-cat-' + i, c.actuals, c.comps,
+                             compLabel, colors, null);
+            });
+        });
         });
 
     } else {
         // ── DRILL-DOWN MODE ───────────────────────────────────────
-        document.getElementById('nav-bar').style.display = 'flex';
+
+        // Show the sidebar back button
+        document.getElementById('sidebar-back').style.display = 'block';
+        document.getElementById('sidebar-back-hr').style.display = 'block';
         document.getElementById('nav-label').innerHTML =
             'Viewing: <b>' + selectedCategory + '</b>';
 
         var c = d.cats[selectedCategory];
 
-        // Row 1: Category KPI + subcategory chart
-        renderKPI(document.getElementById('kpi-main'), selectedCategory,
-                  c.total, plabel, true);
+        // Row 1: Total Sales KPI (persistent) + subcategory chart
+        renderKPI(document.getElementById('kpi-main'), 'TOTAL SALES',
+                  d.overall_total, plabel, true);
 
         // Chart label (color legend for subcategory chart)
         document.getElementById('chart-main-label').innerHTML =
             'Blue = Actual  |  Gray = ' + compLabel + ' (period)' +
             '  |  Dark line = ' + compLabel + ' (full year)';
 
-        // Adjust chart-main height for subcategory chart
-        var scHeight = Math.max(220, c.subcats.names.length * 55 + 50);
-        document.getElementById('chart-main').style.height = scHeight + 'px';
-        plotSubcatChart('chart-main', c.subcats, compLabel, plabel, p.year);
-
-        // Row 2: Full-width monthly bar chart for this category
+        // Row 2: Clickable Category KPI (→ back to overview) + monthly trend
         document.getElementById('row2').innerHTML =
-            '<div style="width: 100%;">' +
-                '<div class="section-title">' + selectedCategory + ' &mdash; Monthly Trend</div>' +
-                '<div class="card">' +
-                    '<div class="chart-label">Blue = Actual  |  Gray = ' + compLabel + '</div>' +
-                    '<div class="chart-card-inner">' +
-                        '<div id="chart-drilldown" class="chart-container" style="height: 320px;"></div>' +
+            '<div style="display: flex; flex-direction: column; height: 100%; gap: 10px;">' +
+                // Category KPI card — click to go back to overview
+                '<div style="flex-shrink: 0;">' +
+                    '<div class="card kpi clickable" id="kpi-drilldown-cat" ' +
+                         'onclick="goBack()"></div>' +
+                '</div>' +
+                // Monthly trend chart — fills remaining space
+                '<div style="flex: 1; min-height: 0;">' +
+                    '<div class="card" style="height: 100%;">' +
+                        '<div class="chart-label">Blue = Actual  |  Gray = ' + compLabel + '</div>' +
+                        '<div class="chart-card-inner">' +
+                            '<div id="chart-drilldown" class="chart-container"></div>' +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>';
-        plotBarChart('chart-drilldown', c.actuals, c.comps,
-                     compLabel, colors, 320);
+
+        // Render the category KPI
+        renderKPI(document.getElementById('kpi-drilldown-cat'), selectedCategory,
+                  c.total, plabel, false);
+
+        // Defer Plotly calls — double-rAF for layout computation
+        requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            plotSubcatChart('chart-main', c.subcats, compLabel, plabel, p.year);
+            plotBarChart('chart-drilldown', c.actuals, c.comps,
+                         compLabel, colors, null);
+        });
+        });
     }
 }
 
@@ -475,3 +511,16 @@ function goBack() {
 // ═════════════════════════════════════════════════════════════════════════════
 
 update();
+
+// Re-render on window resize so charts match their new container sizes.
+// Debounced to 150 ms so we don't re-render on every pixel of a drag-resize.
+var _resizeTimer;
+window.addEventListener('resize', function() {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(function() {
+        if (currentData) {
+            var p = getParams();
+            render(p, periodLabel(p), barColors(p));
+        }
+    }, 150);
+});

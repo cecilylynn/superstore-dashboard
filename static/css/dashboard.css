@@ -5,8 +5,9 @@
  *   - Light gray page background (#eef0f5)
  *   - White cards with rounded corners and subtle shadows
  *   - Clean typography with structured KPI cards
- *   - Sidebar with filter controls on the left
- *   - Responsive flexbox layout
+ *   - Full-width title bar on top, sidebar + main below
+ *   - 16:9 aspect ratio on desktop
+ *   - Fixed row heights: Row 1 = 60%, Row 2 = 40%
  *
  * Color scheme (chart colors are set in JS, not here):
  *   Blue #6495ED      — actual sales bars (selected months)
@@ -15,6 +16,7 @@
  *   Dark Gray #555555 — full-year reference lines
  *   Green #2ecc71     — KPI percentage text (above goal)
  *   Red #e74c3c       — KPI percentage text (below goal)
+ *   Darkest Grey #222 — default text color throughout
  */
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -30,17 +32,87 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #eef0f5;
-    color: #333;
+    color: #222;                /* Darkest grey — default text color */
 }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  PAGE LAYOUT — sidebar + main content side by side
+ *  PAGE LAYOUT — title bar on top, sidebar + main below
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* On desktop, lock the dashboard to 16:9 and center it on the page.
+ * Column direction: title bar stacks on top of content-row. */
 .page {
     display: flex;
-    min-height: 100vh;
+    flex-direction: column;       /* Title bar on top, content below */
+    width: 100vw;
+    height: 56.25vw;             /* 100 / 16 * 9 = 56.25% of width → 16:9 */
+    max-height: 100vh;           /* Never taller than the viewport */
+    max-width: 177.78vh;         /* At short viewports, cap width to maintain 16:9 */
+    margin: 0 auto;              /* Center horizontally if viewport is wider than 16:9 */
+}
+
+/* Sidebar + main sit side by side below the title bar */
+.content-row {
+    display: flex;
+    flex: 1;                     /* Takes all remaining height after title bar */
+    min-height: 0;               /* Allows children to shrink below content size */
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  TITLE BAR — spans full width above sidebar + main
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.title-bar {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 6px 0;             /* 6px inner padding, no outer padding */
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;              /* Don't compress the title bar */
+}
+
+/* Logo area — matches sidebar width so they align vertically */
+.title-bar-logo {
+    width: 240px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+}
+
+/* Placeholder box — swap for <img> when logo is ready */
+.logo-placeholder {
+    width: 100%;
+    height: 28px;
+    border: 1.5px dashed #ccc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #bbb;
+    letter-spacing: 1px;
+}
+
+/* Dashboard title text */
+.title-bar-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #222;
+    white-space: nowrap;
+}
+
+/* Selected year text */
+.title-bar-year {
+    font-size: 14px;
+    font-weight: 400;
+    color: #222;
+    margin-left: 24px;
+    white-space: nowrap;
 }
 
 
@@ -54,16 +126,13 @@ body {
     background: #f5f6fa;
     border-right: 1px solid #dde;
     padding: 24px 20px;
-    position: sticky;
-    top: 0;
-    height: 100vh;
     overflow-y: auto;
 }
 
 .sidebar h3 {
     font-size: 14px;
     margin-bottom: 20px;
-    color: #333;
+    color: #222;
     font-weight: 700;
 }
 
@@ -85,7 +154,7 @@ body {
     font-size: 13px;
     background: white;
     margin-bottom: 16px;
-    color: #333;
+    color: #222;
     cursor: pointer;
 }
 
@@ -131,52 +200,39 @@ body {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  MAIN CONTENT AREA
+ *  MAIN CONTENT AREA — flex column with fixed row heights
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 .main {
     flex: 1;
     padding: 28px 32px;
-    min-width: 0;           /* Prevents flex child from overflowing */
-    overflow-y: auto;
+    min-width: 0;               /* Prevents flex child from overflowing */
+    display: flex;              /* Flex column for row height control */
+    flex-direction: column;
+    gap: 16px;                  /* Spacing between Row 1 and Row 2 */
+    overflow: hidden;           /* No scrolling — everything must fit */
 }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  HEADER BAR — title + period info
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 18px 28px;
-    border-radius: 8px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.10);
-    margin-bottom: 20px;
-}
-
-.dashboard-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #1a1a2e;
-}
-
-.dashboard-subtitle {
-    font-size: 12px;
-    color: #999;
-}
-
-
-/* ═══════════════════════════════════════════════════════════════════════════
- *  ROW LAYOUT — flex rows with gaps between cards
+ *  ROW LAYOUT — flex rows with fixed height proportions
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 .row {
     display: flex;
     gap: 16px;
-    margin-bottom: 18px;
+}
+
+/* Row 1: 60% of available .main height (minus gap) */
+.row-1 {
+    flex: 0 0 calc(60% - 8px);
+    min-height: 0;
+}
+
+/* Row 2: fills remaining 40% */
+.row-2 {
+    flex: 1;
+    min-height: 0;
 }
 
 
@@ -184,14 +240,26 @@ body {
  *  CARD — white box that wraps KPIs, charts, etc.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-.card {
+/* Chart cards fill their parent height and use flex column internally */
+.card:not(.kpi) {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+    overflow: hidden;
+    height: 100%;               /* Fill parent height */
+    display: flex;
+    flex-direction: column;     /* Stack chart-label + chart-card-inner */
+}
+
+/* KPI cards keep auto height — don't stretch unnecessarily */
+.card.kpi {
     background: white;
     border-radius: 8px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.10);
     overflow: hidden;
 }
 
-/* Cards that can be clicked (category panels in overview) */
+/* Cards that can be clicked (category panels in overview, category KPI in drill-down) */
 .clickable {
     cursor: pointer;
     transition: box-shadow 0.15s ease;
@@ -207,28 +275,25 @@ body {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 .kpi {
-    padding: 22px 26px;
+    padding: 8px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;    /* Vertically center KPI content */
 }
 
-.kpi-title {
-    font-size: 12px;
+/* Combined first line: "Category – Period Revenue" */
+.kpi-header {
+    font-size: 11px;
     font-weight: 600;
     color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.kpi-period {
-    font-size: 11px;
-    color: #aaa;
-    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
 }
 
 .kpi-value {
     font-size: 34px;
     font-weight: 900;
-    color: #1a1a2e;
+    color: #222;
     font-family: 'Arial Black', Arial, sans-serif;
     line-height: 1.1;
 }
@@ -237,16 +302,9 @@ body {
     font-size: 50px;
 }
 
-.kpi-separator {
-    border: none;
-    border-top: 1px solid #eee;
-    margin: 10px 0 8px 0;
-}
-
 .kpi-comp {
     font-size: 13px;
     color: #666;
-    margin-top: 8px;
 }
 
 /* Green text for above goal/comparison */
@@ -261,20 +319,14 @@ body {
     font-weight: 700;
 }
 
-/* Small exact-value text below the comparison line */
-.kpi-exact {
-    font-size: 10px;
-    color: #bbb;
-    margin-top: 8px;
-}
-
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  CHART CONTAINERS
+ *  CHART CONTAINERS — fill their parent card
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 .chart-container {
     width: 100%;
+    height: 100%;               /* Fill parent (chart-card-inner) */
 }
 
 /* Color legend label above charts */
@@ -282,24 +334,20 @@ body {
     font-size: 11px;
     color: #aaa;
     padding: 12px 16px 0 16px;
+    flex-shrink: 0;             /* Don't compress the label */
 }
 
 /* Inner padding for chart cards so bars don't touch edges */
 .chart-card-inner {
     padding: 4px 8px 8px 8px;
+    flex: 1;                    /* Fill remaining card height */
+    min-height: 0;              /* Allow shrinking */
 }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  NAVIGATION — back button for drill-down mode
+ *  NAVIGATION — back button in sidebar (drill-down mode only)
  * ═══════════════════════════════════════════════════════════════════════════ */
-
-.nav-bar {
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
 
 .back-btn {
     display: inline-block;
@@ -319,6 +367,13 @@ body {
     border-color: #bbb;
 }
 
+/* Full-width back button when inside the sidebar */
+.sidebar-back-btn {
+    display: block;
+    text-align: center;
+    width: 100%;
+}
+
 .nav-label {
     font-size: 13px;
     color: #666;
@@ -335,5 +390,3 @@ body {
     color: #555;
     margin: 8px 0 12px 0;
 }
-
-

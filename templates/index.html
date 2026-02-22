@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Dashboard</title>
+    <title>Superstore Pacing Report</title>
 
     <!-- Plotly.js for client-side chart rendering -->
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
@@ -15,105 +15,122 @@
 <div class="page">
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         SIDEBAR — filter controls
+         TITLE BAR — spans full width above sidebar + main
          ═══════════════════════════════════════════════════════════════════ -->
-    <div class="sidebar">
-        <h3>Settings</h3>
-
-        <!-- Year selector -->
-        <label for="sel-year">Year</label>
-        <select id="sel-year" onchange="update()">
-            <option value="2020">2020</option>
-            <option value="2021">2021</option>
-            <option value="2022">2022</option>
-            <option value="2023" selected>2023</option>
-        </select>
-
-        <!-- Month selector -->
-        <label for="sel-month">Through Month</label>
-        <select id="sel-month" onchange="update()">
-            <option value="1">January</option>
-            <option value="2">February</option>
-            <option value="3">March</option>
-            <option value="4">April</option>
-            <option value="5">May</option>
-            <option value="6">June</option>
-            <option value="7">July</option>
-            <option value="8">August</option>
-            <option value="9">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12" selected>December</option>
-        </select>
-
-        <hr>
-
-        <!-- Time Range toggle -->
-        <div class="radio-group">
-            <div class="radio-group-title">Time Range</div>
-            <label>
-                <input type="radio" name="time_range" value="YTD" checked onchange="update()">
-                Year-to-Date
-            </label>
-            <label>
-                <input type="radio" name="time_range" value="Month Only" onchange="update()">
-                Month Only
-            </label>
+    <div class="title-bar">
+        <!-- Logo area — same width as sidebar (240px) -->
+        <div class="title-bar-logo">
+            <div class="logo-placeholder">LOGO</div>
         </div>
-
-        <hr>
-
-        <!-- Comparison Mode toggle -->
-        <div class="radio-group">
-            <div class="radio-group-title">Compare To</div>
-            <label>
-                <input type="radio" name="comp_mode" value="vs Goal" checked onchange="update()">
-                vs Goal
-            </label>
-            <label>
-                <input type="radio" name="comp_mode" value="vs Prior Year" onchange="update()">
-                vs Prior Year
-            </label>
-        </div>
+        <!-- Dashboard title -->
+        <div class="title-bar-title">Superstore Pacing Report - Executive Overview</div>
+        <!-- Selected year (populated by JS) -->
+        <div class="title-bar-year" id="title-year"></div>
+        <!-- Spacer fills remaining width -->
+        <div style="flex: 1;"></div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         MAIN CONTENT
+         CONTENT ROW — sidebar + main sit below the title bar
          ═══════════════════════════════════════════════════════════════════ -->
-    <div class="main">
+    <div class="content-row">
 
-        <!-- Header bar -->
-        <div class="dashboard-header">
-            <div class="dashboard-title">Sales Dashboard</div>
-            <div class="dashboard-subtitle" id="period-label"></div>
-        </div>
+        <!-- ═══════════════════════════════════════════════════════════════
+             SIDEBAR — filter controls
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="sidebar">
+            <h3>Settings</h3>
 
-        <!-- Navigation bar (shown only in drill-down mode) -->
-        <div class="nav-bar" id="nav-bar" style="display: none;">
-            <a href="#" class="back-btn" onclick="goBack(); return false;">
-                &larr; Back to Overview
-            </a>
-            <span class="nav-label" id="nav-label"></span>
-        </div>
+            <!-- Year selector -->
+            <label for="sel-year">Year</label>
+            <select id="sel-year" onchange="update()">
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023" selected>2023</option>
+            </select>
 
-        <!-- ROW 1: KPI card (left) + main chart (right) -->
-        <div class="row">
-            <div style="flex: 0 0 280px;">
-                <div class="card kpi" id="kpi-main"></div>
+            <!-- Month selector -->
+            <label for="sel-month">Through Month</label>
+            <select id="sel-month" onchange="update()">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12" selected>December</option>
+            </select>
+
+            <hr>
+
+            <!-- Time Range toggle -->
+            <div class="radio-group">
+                <div class="radio-group-title">Time Range</div>
+                <label>
+                    <input type="radio" name="time_range" value="YTD" checked onchange="update()">
+                    Year-to-Date
+                </label>
+                <label>
+                    <input type="radio" name="time_range" value="Month Only" onchange="update()">
+                    Month Only
+                </label>
             </div>
-            <div style="flex: 1; min-width: 0;">
-                <div class="card">
-                    <div class="chart-label" id="chart-main-label"></div>
-                    <div class="chart-card-inner">
-                        <div id="chart-main" class="chart-container" style="height: 320px;"></div>
+
+            <hr>
+
+            <!-- Comparison Mode toggle -->
+            <div class="radio-group">
+                <div class="radio-group-title">Compare To</div>
+                <label>
+                    <input type="radio" name="comp_mode" value="vs Goal" checked onchange="update()">
+                    vs Goal
+                </label>
+                <label>
+                    <input type="radio" name="comp_mode" value="vs Prior Year" onchange="update()">
+                    vs Prior Year
+                </label>
+            </div>
+
+            <!-- Back button (shown only in drill-down mode, controlled by JS) -->
+            <hr id="sidebar-back-hr" style="display: none;">
+            <div id="sidebar-back" style="display: none;">
+                <a href="#" class="back-btn sidebar-back-btn" onclick="goBack(); return false;">
+                    &larr; Back to Overview
+                </a>
+                <div class="nav-label" id="nav-label" style="margin-top: 6px;"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             MAIN CONTENT
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="main">
+
+            <!-- ROW 1: KPI card (left) + main chart (right) -->
+            <div class="row row-1">
+                <div style="flex: 0 0 280px;">
+                    <div class="card kpi" id="kpi-main"></div>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div class="card">
+                        <div class="chart-label" id="chart-main-label"></div>
+                        <div class="chart-card-inner">
+                            <div id="chart-main" class="chart-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- ROW 2: Three category panels (overview) or detail (drill-down) -->
+            <div id="row2" class="row-2"></div>
+
         </div>
-
-        <!-- ROW 2: Three category panels (overview) or detail (drill-down) -->
-        <div id="row2"></div>
-
     </div>
 </div>
 
