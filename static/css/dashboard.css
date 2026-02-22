@@ -38,7 +38,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     background: #eef0f5;
     color: #222;                /* Darkest grey — default text color */
 }
@@ -194,7 +194,7 @@ body {
     font-weight: 400;
     cursor: pointer;
     font-size: 13px;
-    color: #444;
+    color: #555;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -257,6 +257,7 @@ body {
     height: 100%;               /* Fill parent height */
     display: flex;
     flex-direction: column;     /* Stack chart-label + chart-card-inner */
+    padding: 12px;              /* Card owns all spacing — inner elements use 0 */
 }
 
 /* KPI cards keep auto height — don't stretch unnecessarily */
@@ -292,8 +293,8 @@ body {
     overflow: hidden;
     cursor: pointer;
     transition: box-shadow 0.15s ease;
-    margin: 6px;
-    padding: 8px;
+    padding: 12px;
+    gap: 12px;
 }
 
 .cat-column:hover {
@@ -337,7 +338,7 @@ body {
 
 /* Combined first line: "Category – Period Revenue" */
 .kpi-header {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: #888;
     letter-spacing: 0.3px;
@@ -346,9 +347,8 @@ body {
 
 .kpi-value {
     font-size: 34px;
-    font-weight: 900;
+    font-weight: 800;
     color: var(--accent-blue);
-    font-family: 'Arial Black', Arial, sans-serif;
     line-height: 1.1;
 }
 
@@ -358,7 +358,7 @@ body {
 
 .kpi-comp {
     font-size: 13px;
-    color: #666;
+    color: #555;
 }
 
 /* Green text for above goal/comparison */
@@ -391,17 +391,18 @@ body {
     height: 100%;               /* Fill parent (chart-card-inner) */
 }
 
-/* Color legend label above charts */
+/* Chart title — card container handles all padding, so none here */
 .chart-label {
-    font-size: 11px;
-    color: #aaa;
-    padding: 12px 16px 0 16px;
-    flex-shrink: 0;             /* Don't compress the label */
+    font-size: 16px;
+    color: #555;
+    padding: 0;
+    margin-bottom: 6px;
+    flex-shrink: 0;
 }
 
-/* Inner padding for chart cards so bars don't touch edges */
+/* Inner chart wrapper — padding lives on the card container */
 .chart-card-inner {
-    padding: 4px 8px 8px 8px;
+    padding: 0;
     flex: 1;                    /* Fill remaining card height */
     min-height: 0;              /* Allow shrinking */
 }
@@ -438,7 +439,7 @@ body {
 
 .nav-label {
     font-size: 13px;
-    color: #666;
+    color: #555;
 }
 
 

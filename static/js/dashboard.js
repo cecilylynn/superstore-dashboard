@@ -198,23 +198,27 @@ function plotBarChart(divId, actuals, comps, compLabel, colors, height, xLabels)
         barmode: 'overlay',
         width: chartWidth,
         height: chartHeight,
-        margin: {t: 12, b: 40, l: 56, r: 16},
+        // Margins zeroed — spacing is controlled by CSS containers.
+        // automargin on each axis lets Plotly expand only as needed for tick labels.
+        margin: {t: 0, b: 0, l: 0, r: 0},
         template: 'plotly_white',
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {family: 'Open Sans, sans-serif'},
         yaxis: {
             tickformat: '$~s',
             tickfont: {size: 12, color: '#888'},
             showgrid: false,
+            automargin: true,
         },
         xaxis: Object.assign(
-            {tickfont: {size: 11, color: '#888'}},
+            {tickfont: {size: 11, color: '#888'}, automargin: true},
             xLabels ? {tickvals: MONTH_NAMES, ticktext: xLabels} : {}
         ),
         hoverlabel: {bgcolor: 'white', font: {size: 12}, bordercolor: '#ddd'},
     };
 
-    Plotly.react(divId, traces, layout, {responsive: true});
+    Plotly.react(divId, traces, layout, {responsive: true, displayModeBar: false});
 }
 
 
@@ -293,21 +297,25 @@ function plotSubcatChart(divId, sc, compLabel, plabel, year) {
         barmode: 'overlay',
         width: chartWidth,
         height: chartHeight,
-        margin: {t: 12, b: 24, l: 130, r: 16},
+        // t/b/r zeroed. l must be non-zero so annotation labels have physical
+        // space to render — sized to fit the longest subcategory name at 12px.
+        margin: {t: 0, b: 0, l: 110, r: 0},
         template: 'plotly_white',
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {family: 'Open Sans, sans-serif'},
         xaxis: {
             tickformat: '$~s',
             tickfont: {size: 12, color: '#888'},
             showgrid: false,
+            automargin: true,
         },
         yaxis: {
             showticklabels: false,
         },
         shapes: shapes,
-        // Left-aligned subcategory labels (annotations instead of tick labels
-        // so text starts at the same left position rather than right-aligning)
+        // Left-aligned subcategory labels via annotations (native tick labels
+        // would be right-aligned; annotations let us left-align at a fixed column).
         annotations: names.map(function(name) {
             return {
                 xref: 'paper', yref: 'y',
@@ -315,14 +323,14 @@ function plotSubcatChart(divId, sc, compLabel, plabel, year) {
                 text: name,
                 showarrow: false,
                 xanchor: 'left',
-                xshift: -125,   // margin.l is 130, leaves 5px left padding
-                font: {size: 12, color: '#444'},
+                xshift: -105,   // margin.l is 110, leaves 5px left padding
+                font: {size: 12, color: '#555', family: 'Open Sans, sans-serif'},
             };
         }),
         hoverlabel: {bgcolor: 'white', font: {size: 12}, bordercolor: '#ddd'},
     };
 
-    Plotly.react(divId, traces, layout, {responsive: true});
+    Plotly.react(divId, traces, layout, {responsive: true, displayModeBar: false});
 }
 
 
@@ -402,16 +410,19 @@ function render(p, plabel, colors) {
         renderKPI(document.getElementById('kpi-main'), 'TOTAL SALES',
                   d.overall_total, plabel, true);
 
-        // Chart label (color legend)
-        document.getElementById('chart-main-label').textContent =
-            'Blue = Actual  |  Gray = ' + compLabel;
+        // Chart title — styled with bar colors
+        document.getElementById('chart-main-label').innerHTML =
+            'Total Revenue ' + plabel + ' \u2013 ' +
+            '<span style="color:' + BLUE + '; font-weight:700;">Actuals</span>' +
+            ' vs ' +
+            '<span style="color:' + LIGHT_GRAY + '; font-weight:700;">' + compLabel + '</span>';
 
         // Row 2: Three category panels (clicking any card drills down)
         // Each category is ONE unified card (.cat-column):
         //   - KPI div acts as the card header (no card styling of its own)
         //   - chart div fills the remaining card height
         //   - onclick on the whole column — no separate clickable inner elements
-        var row2Html = '<div class="row" style="height: 100%; gap: 0;">';
+        var row2Html = '<div class="row" style="height: 100%; gap: 12px;">';
         CATEGORIES.forEach(function(cat, i) {
             row2Html +=
                 '<div class="cat-column" onclick="selectCategory(\'' + cat + '\')">' +
@@ -461,10 +472,14 @@ function render(p, plabel, colors) {
         renderKPI(document.getElementById('kpi-main'), 'TOTAL SALES',
                   d.overall_total, plabel, true);
 
-        // Chart label (color legend for subcategory chart)
+        // Chart title — two lines: main title + full-year reference note
         document.getElementById('chart-main-label').innerHTML =
-            'Blue = Actual  |  Gray = ' + compLabel + ' (period)' +
-            '  |  Dark line = ' + compLabel + ' (full year)';
+            selectedCategory + ' Revenue ' + plabel + ' \u2013 ' +
+            '<span style="color:' + BLUE + '; font-weight:700;">Actuals</span>' +
+            ' vs ' +
+            '<span style="color:' + LIGHT_GRAY + '; font-weight:700;">' + compLabel + '</span>' +
+            '<br><span style="font-size:12px; color:#555;">Total ' + compLabel + ' (full year) indicated by ' +
+            '<span style="color:' + DARK_GRAY + '; font-weight:700;">|</span></span>';
 
         // Row 2: Single unified card — Category KPI header + monthly trend chart.
         // Mirrors the .cat-column pattern from overview: one card wraps both,
@@ -473,7 +488,6 @@ function render(p, plabel, colors) {
             '<div class="cat-column" style="height: 100%;" onclick="goBack()">' +
                 '<div class="kpi" id="kpi-drilldown-cat"></div>' +
                 '<div class="cat-chart">' +
-                    '<div class="chart-label">Blue = Actual  |  Gray = ' + compLabel + '</div>' +
                     '<div class="chart-card-inner">' +
                         '<div id="chart-drilldown" class="chart-container"></div>' +
                     '</div>' +
