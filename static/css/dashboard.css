@@ -1,3 +1,11 @@
+/* ── Single source of truth for accent colors ─────────────────────────────
+ * Change --accent-blue here and it updates both the KPI big numbers (CSS)
+ * and the chart bar colors (JS reads this variable at init).
+ * ──────────────────────────────────────────────────────────────────────── */
+:root {
+    --accent-blue: #6495ED;
+}
+
 /*
  * dashboard.css — All styling for the Flask Sales Dashboard
  *
@@ -328,7 +336,7 @@ body {
 .kpi-value {
     font-size: 34px;
     font-weight: 900;
-    color: #222;
+    color: var(--accent-blue);
     font-family: 'Arial Black', Arial, sans-serif;
     line-height: 1.1;
 }

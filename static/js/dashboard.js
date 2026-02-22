@@ -18,7 +18,10 @@
 // ═════════════════════════════════════════════════════════════════════════════
 // These match the Python color constants in chart_builders.py
 
-const BLUE       = '#6495ED';   // Actual sales bars (selected months)
+// Read accent blue from CSS custom property so one change updates both
+// the KPI big-number text color (CSS) and the chart bar color (JS).
+const BLUE = getComputedStyle(document.documentElement)
+                 .getPropertyValue('--accent-blue').trim() || '#6495ED';
 const PALE_BLUE  = '#B0C4DE';   // Actual sales bars (unselected months)
 const LIGHT_GRAY = '#D3D3D3';   // Comparison bars (goal or prior year)
 const DARK_GRAY  = '#555555';   // Full-year reference lines on subcategory chart
