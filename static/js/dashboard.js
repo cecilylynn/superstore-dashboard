@@ -388,17 +388,16 @@ function render(p, plabel, colors) {
             'Blue = Actual  |  Gray = ' + compLabel;
 
         // Row 2: Three category panels (clicking any card drills down)
+        // Each category is ONE unified card (.cat-column):
+        //   - KPI div acts as the card header (no card styling of its own)
+        //   - chart div fills the remaining card height
+        //   - onclick on the whole column — no separate clickable inner elements
         var row2Html = '<div class="row" style="height: 100%;">';
         CATEGORIES.forEach(function(cat, i) {
             row2Html +=
-                '<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">' +
-                    // KPI card (clickable)
-                    '<div class="card kpi clickable" id="kpi-cat-' + i + '" ' +
-                         'onclick="selectCategory(\'' + cat + '\')" ' +
-                         'style="flex-shrink: 0;"></div>' +
-                    // Chart card (clickable, fills remaining space)
-                    '<div class="card clickable" onclick="selectCategory(\'' + cat + '\')" ' +
-                         'style="flex: 1; min-height: 0;">' +
+                '<div class="cat-column" onclick="selectCategory(\'' + cat + '\')">' +
+                    '<div class="kpi" id="kpi-cat-' + i + '"></div>' +
+                    '<div class="cat-chart">' +
                         '<div class="chart-card-inner">' +
                             '<div id="chart-cat-' + i + '" class="chart-container"></div>' +
                         '</div>' +
