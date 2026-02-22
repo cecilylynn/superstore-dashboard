@@ -411,7 +411,7 @@ function render(p, plabel, colors) {
         //   - KPI div acts as the card header (no card styling of its own)
         //   - chart div fills the remaining card height
         //   - onclick on the whole column — no separate clickable inner elements
-        var row2Html = '<div class="row" style="height: 100%;">';
+        var row2Html = '<div class="row" style="height: 100%; gap: 0;">';
         CATEGORIES.forEach(function(cat, i) {
             row2Html +=
                 '<div class="cat-column" onclick="selectCategory(\'' + cat + '\')">' +
@@ -466,21 +466,16 @@ function render(p, plabel, colors) {
             'Blue = Actual  |  Gray = ' + compLabel + ' (period)' +
             '  |  Dark line = ' + compLabel + ' (full year)';
 
-        // Row 2: Clickable Category KPI (→ back to overview) + monthly trend
+        // Row 2: Single unified card — Category KPI header + monthly trend chart.
+        // Mirrors the .cat-column pattern from overview: one card wraps both,
+        // no internal borders or shadows, overflow:hidden clips to rounded corners.
         document.getElementById('row2').innerHTML =
-            '<div style="display: flex; flex-direction: column; height: 100%; gap: 10px;">' +
-                // Category KPI card — click to go back to overview
-                '<div style="flex-shrink: 0;">' +
-                    '<div class="card kpi clickable" id="kpi-drilldown-cat" ' +
-                         'onclick="goBack()"></div>' +
-                '</div>' +
-                // Monthly trend chart — fills remaining space
-                '<div style="flex: 1; min-height: 0;">' +
-                    '<div class="card" style="height: 100%;">' +
-                        '<div class="chart-label">Blue = Actual  |  Gray = ' + compLabel + '</div>' +
-                        '<div class="chart-card-inner">' +
-                            '<div id="chart-drilldown" class="chart-container"></div>' +
-                        '</div>' +
+            '<div class="cat-column" style="height: 100%;" onclick="goBack()">' +
+                '<div class="kpi" id="kpi-drilldown-cat"></div>' +
+                '<div class="cat-chart">' +
+                    '<div class="chart-label">Blue = Actual  |  Gray = ' + compLabel + '</div>' +
+                    '<div class="chart-card-inner">' +
+                        '<div id="chart-drilldown" class="chart-container"></div>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -527,6 +522,9 @@ function goBack() {
 // ═════════════════════════════════════════════════════════════════════════════
 //  INITIAL RENDER — load data and draw the dashboard
 // ═════════════════════════════════════════════════════════════════════════════
+
+// Default the month selector to the current calendar month
+document.getElementById('sel-month').value = new Date().getMonth() + 1;
 
 update();
 
