@@ -27,8 +27,9 @@ const LIGHT_GRAY = '#D3D3D3';   // Comparison bars (goal or prior year)
 const DARK_GRAY  = '#555555';   // Full-year reference lines on subcategory chart
 
 const CATEGORIES = ['Furniture', 'Office Supplies', 'Technology'];
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES   = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LETTERS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June',
                     'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -151,8 +152,9 @@ function renderKPI(el, title, total, plabel, large) {
  *   compLabel — "Goal" or "2022"
  *   colors    — array of 12 color strings (blue or pale blue)
  *   height    — chart height in pixels (null = fill container)
+ *   xLabels   — optional array of 12 tick labels (e.g. MONTH_LETTERS for category charts)
  */
-function plotBarChart(divId, actuals, comps, compLabel, colors, height) {
+function plotBarChart(divId, actuals, comps, compLabel, colors, height, xLabels) {
     const p = getParams();
 
     // Build hover text for each month showing actual, comparison, and % difference
@@ -201,13 +203,14 @@ function plotBarChart(divId, actuals, comps, compLabel, colors, height) {
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         yaxis: {
-            tickprefix: '$', tickformat: ',.0f',
+            tickformat: '$~s',
             tickfont: {size: 12, color: '#888'},
-            gridcolor: '#e8e8e8',
+            showgrid: false,
         },
-        xaxis: {
-            tickfont: {size: 11, color: '#888'},
-        },
+        xaxis: Object.assign(
+            {tickfont: {size: 11, color: '#888'}},
+            xLabels ? {tickvals: MONTH_NAMES, ticktext: xLabels} : {}
+        ),
         hoverlabel: {bgcolor: 'white', font: {size: 12}, bordercolor: '#ddd'},
     };
 
@@ -295,14 +298,27 @@ function plotSubcatChart(divId, sc, compLabel, plabel, year) {
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         xaxis: {
-            tickprefix: '$', tickformat: ',.0f',
+            tickformat: '$~s',
             tickfont: {size: 12, color: '#888'},
-            gridcolor: '#e8e8e8',
+            showgrid: false,
         },
         yaxis: {
-            tickfont: {size: 12, color: '#444'},
+            showticklabels: false,
         },
         shapes: shapes,
+        // Left-aligned subcategory labels (annotations instead of tick labels
+        // so text starts at the same left position rather than right-aligning)
+        annotations: names.map(function(name) {
+            return {
+                xref: 'paper', yref: 'y',
+                x: 0, y: name,
+                text: name,
+                showarrow: false,
+                xanchor: 'left',
+                xshift: -125,   // margin.l is 130, leaves 5px left padding
+                font: {size: 12, color: '#444'},
+            };
+        }),
         hoverlabel: {bgcolor: 'white', font: {size: 12}, bordercolor: '#ddd'},
     };
 
@@ -425,7 +441,7 @@ function render(p, plabel, colors) {
                 renderKPI(document.getElementById('kpi-cat-' + i), cat,
                           c.total, plabel, false);
                 plotBarChart('chart-cat-' + i, c.actuals, c.comps,
-                             compLabel, colors, null);
+                             compLabel, colors, null, MONTH_LETTERS);
             });
         });
         });
