@@ -3,7 +3,7 @@
 
 services:
   - type: web
-    name: superstore-dashboard
+    name: superstore-dashboard-v1
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
