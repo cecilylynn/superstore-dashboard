@@ -102,8 +102,13 @@
                 </label>
             </div>
 
+            <!-- Permanent separator; hint or back button appears below -->
+            <hr>
+
+            <!-- Overview hint (shown only in overview mode, controlled by JS) -->
+            <div id="sidebar-hint">Click a category card<br>to drill down</div>
+
             <!-- Back button (shown only in drill-down mode, controlled by JS) -->
-            <hr id="sidebar-back-hr" style="display: none;">
             <div id="sidebar-back" style="display: none;">
                 <a href="#" class="back-btn sidebar-back-btn" onclick="goBack(); return false;">
                     &larr; Back to Overview

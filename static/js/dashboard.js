@@ -402,9 +402,9 @@ function render(p, plabel, colors) {
     if (selectedCategory === null) {
         // ── OVERVIEW MODE ─────────────────────────────────────────
 
-        // Hide the sidebar back button
+        // Hide the sidebar back button; show overview hint
         document.getElementById('sidebar-back').style.display = 'none';
-        document.getElementById('sidebar-back-hr').style.display = 'none';
+        document.getElementById('sidebar-hint').style.display = 'block';
 
         // Row 1: Overall KPI + overall bar chart
         renderKPI(document.getElementById('kpi-main'), 'TOTAL SALES',
@@ -460,9 +460,9 @@ function render(p, plabel, colors) {
     } else {
         // ── DRILL-DOWN MODE ───────────────────────────────────────
 
-        // Show the sidebar back button
+        // Show the sidebar back button; hide overview hint
         document.getElementById('sidebar-back').style.display = 'block';
-        document.getElementById('sidebar-back-hr').style.display = 'block';
+        document.getElementById('sidebar-hint').style.display = 'none';
         document.getElementById('nav-label').innerHTML =
             'Viewing: <b>' + selectedCategory + '</b>';
 
